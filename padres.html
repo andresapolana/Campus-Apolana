@@ -425,46 +425,63 @@ function buscar() {
   area.innerHTML = Object.values(byKid).map(entries => renderKidCard(entries)).join('');
 }
 
+function toggleDetail(id) {
+  const el = document.getElementById(id);
+  const arrow = document.getElementById(id+'-arrow');
+  if (!el) return;
+  const isOpen = el.style.display !== 'none';
+  el.style.display = isOpen ? 'none' : 'block';
+  if (arrow) arrow.textContent = isOpen ? '▼ Ver compañeros' : '▲ Ocultar';
+}
+
 function renderKidCard(entries) {
-  // entries = array of {kid, semana, gi, groupName, groupCls, groupKids} for same kid
   const first = entries[0];
   const { kid } = first;
   const name = fullName(kid);
   const initials = name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
-
-  // Header color from first entry
   const headerCls = first.groupCls;
+  const colorMap = {'color-rojo':'#E74C3C','color-verde':'#27AE60','color-azul':'#2980B9','color-amarillo':'#F39C12'};
 
-  // Badges
   const badges = [];
   if (kid.comedor) badges.push('🍽️ Comedor');
   if (kid.matinera) badges.push('🌅 Matinera');
 
-  // Semanas section — one block per semana
-  const semanasHTML = entries.map(entry => {
-    const { semana, groupName, groupCls, groupKids, gi } = entry;
-    const compis = groupKids
-      .filter(k => fullName(k) !== name)
-      .map(k => censorName(k));
+  const semanasResumen = entries.map(entry => {
+    const dot = colorMap[entry.groupCls] || '#888';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.04);border-radius:10px;border:1px solid rgba(255,255,255,.08)">
+      <div style="width:12px;height:12px;border-radius:50%;background:${dot};flex-shrink:0"></div>
+      <div style="flex:1">
+        <div style="font-weight:700;font-size:.9rem">${entry.semana}</div>
+        <div style="font-size:.75rem;color:#8899AA;margin-top:1px">Grupo ${entry.groupName} · ${entry.groupKids.length} niños</div>
+      </div>
+      ${kid.comedor?'<span style="font-size:.72rem;background:rgba(255,184,0,.12);color:#FFB800;border:1px solid rgba(255,184,0,.3);border-radius:4px;padding:2px 7px">🍽️</span>':''}
+      ${kid.matinera?'<span style="font-size:.72rem;background:rgba(255,255,255,.06);color:#aaa;border:1px solid rgba(255,255,255,.12);border-radius:4px;padding:2px 7px">🌅</span>':''}
+    </div>`;
+  }).join('');
 
-    return `
-      <div style="margin-bottom:20px">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-          <div style="background:({'color-rojo':'#E74C3C','color-verde':'#27AE60','color-azul':'#2980B9','color-amarillo':'#F39C12'}[groupCls]||'#888');width:10px;height:10px;border-radius:50%;flex-shrink:0"></div>
-          <div style="font-weight:700;font-size:.95rem">Grupo ${groupName} <span style="color:#8899AA;font-weight:400;font-size:.82rem">— ${semana}</span></div>
+  const safeBase = name.replace(/[^a-zA-Z0-9]/g, '_');
+
+  const semanasDetalle = entries.map((entry, ei) => {
+    const { semana, groupName, groupCls, groupKids } = entry;
+    const dot = colorMap[groupCls] || '#888';
+    const compis = groupKids.filter(k => fullName(k) !== name).map(k => censorName(k));
+    const detailId = 'detail_' + safeBase + '_' + ei;
+
+    return `<div style="margin-bottom:10px">
+      <button onclick="toggleDetail('${detailId}')"
+        style="width:100%;display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:10px 14px;cursor:pointer;color:#fff;text-align:left">
+        <div style="width:10px;height:10px;border-radius:50%;background:${dot};flex-shrink:0"></div>
+        <div style="flex:1;font-weight:600;font-size:.85rem">${semana} — Grupo ${groupName}</div>
+        <span style="font-size:.72rem;color:#8899AA" id="${detailId}-arrow">▼ Ver compañeros</span>
+      </button>
+      <div id="${detailId}" style="display:none;padding:10px 4px 0">
+        <div style="font-size:.72rem;font-weight:600;color:#8899AA;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">👥 ${compis.length} compañeros</div>
+        <div style="display:flex;flex-direction:column;gap:3px">
+          ${compis.map((n,i) => '<div style="display:flex;align-items:center;gap:8px;padding:5px 10px;background:rgba(255,255,255,.03);border-radius:7px;font-size:.82rem"><span style="color:#8899AA;min-width:20px;font-size:.7rem">'+(i+1)+'.</span><span style="color:rgba(255,255,255,.8)">'+n+'</span></div>').join('')}
         </div>
-        <div style="margin-left:20px">
-          <div style="font-size:.72rem;font-weight:600;color:#8899AA;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">👥 Compañeros de grupo (${groupKids.length} niños en total)</div>
-          <div style="display:flex;flex-direction:column;gap:4px">
-            ${compis.map((n,i) => `
-              <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:rgba(255,255,255,.04);border-radius:8px;font-size:.84rem">
-                <span style="color:#8899AA;min-width:20px;font-size:.72rem">${i+1}.</span>
-                <span style="color:rgba(255,255,255,.85)">${n}</span>
-              </div>`).join('')}
-          </div>
-        </div>
-      </div>`;
-  }).join('<div style="border-top:1px solid rgba(255,255,255,.08);margin:16px 0"></div>');
+      </div>
+    </div>`;
+  }).join('');
 
   return `
     <div class="result-card">
@@ -472,11 +489,14 @@ function renderKidCard(entries) {
         <div class="result-avatar">${initials}</div>
         <div>
           <div class="result-name">${name}</div>
-          <div class="result-sub">${entries.length} semana${entries.length>1?'s':''} en el campus${badges.length?' · '+badges.join(' · '):''}</div>
+          <div class="result-sub">${entries.length} semana${entries.length>1?'s':''} · ${badges.join(' · ')||'Sin servicios adicionales'}</div>
         </div>
       </div>
       <div class="result-body">
-        ${semanasHTML}
+        <div style="font-size:.72rem;font-weight:600;color:#8899AA;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">📅 Grupos asignados</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">${semanasResumen}</div>
+        <div style="font-size:.72rem;font-weight:600;color:#8899AA;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">👥 Compañeros por semana</div>
+        ${semanasDetalle}
       </div>
     </div>`;
 }

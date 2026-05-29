@@ -77,8 +77,9 @@ input:focus,select:focus{outline:none;border-color:var(--sky)}
 .stat-label{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:3px}
 
 /* TABS */
-.turno-tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
-.ttab{padding:7px 14px;border-radius:20px;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-size:.78rem;font-weight:600;transition:all .2s;color:#aaa}
+.turno-tabs{display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.turno-tabs::-webkit-scrollbar{display:none}
+.ttab{padding:7px 14px;border-radius:20px;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-size:.78rem;font-weight:600;transition:all .2s;color:#aaa;white-space:nowrap;flex-shrink:0;text-align:center;line-height:1.3}
 .ttab.active{background:var(--dark);color:#fff;border-color:var(--dark)}
 
 /* GRUPOS GRID */
@@ -304,6 +305,15 @@ pre.export-text{background:#F6F8FA;border-radius:var(--radius-sm);padding:14px;f
       <!-- MODO FORMULARIO -->
       <div id="modeFormPanel" style="display:none">
         <div class="alert alert-info" style="margin-bottom:14px">📝 Sube el Excel del formulario de Google Forms. La app cruza por nombre y <strong>solo añade</strong> alergias, comedor y observaciones a los niños ya asignados a grupos. No borra ni mueve a nadie.</div>
+
+        <!-- Enrich mode selector -->
+        <div style="display:flex;gap:8px;margin-bottom:14px">
+          <button id="enrichModeBtn" onclick="setEnrichMode('enrich')" class="btn btn-primary btn-sm" style="flex:1">✨ Solo enriquecer grupos existentes</button>
+          <button id="generateModeBtn" onclick="setEnrichMode('generate')" class="btn btn-outline btn-sm" style="flex:1">⚙️ Generar grupos nuevos</button>
+        </div>
+        <div id="enrichModeInfo" style="font-size:.78rem;color:#1A7A40;background:#EDFBF3;border:1px solid #A8E6C0;border-radius:8px;padding:8px 12px;margin-bottom:14px">
+          ✅ Modo enriquecer: solo se añaden alergias, comedor y observaciones a los niños que ya están en grupos. No se generan grupos nuevos.
+        </div>
         <div id="dropZone" ondragover="dragOver(event,'form')" ondragleave="dragLeave(event,'form')" ondrop="dropFile(event,'form')" style="border:2px dashed #C7D9FF;border-radius:12px;padding:28px 20px;text-align:center;background:#F7FAFF;transition:all .2s;margin-bottom:14px">
           <div style="font-size:2rem;margin-bottom:8px">📊</div>
           <div style="font-weight:600;color:#0066FF;margin-bottom:8px">Arrastra el Excel del formulario aquí</div>
@@ -329,7 +339,7 @@ pre.export-text{background:#F6F8FA;border-radius:var(--radius-sm);padding:14px;f
       <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
         <button class="btn btn-primary" onclick="loadDemo()">🎯 Cargar ejemplo</button>
         <button class="btn btn-outline" onclick="clearData()">🗑️ Limpiar</button>
-        <button class="btn btn-success" id="nextBtn" onclick="goToMapping()" style="margin-left:auto;display:none">Siguiente →</button>
+        <button class="btn btn-success" id="nextBtn" onclick="handleFormularioNext()" style="margin-left:auto;display:none">Siguiente →</button>
       </div>
     </div>
   </div>
@@ -480,6 +490,7 @@ pre.export-text{background:#F6F8FA;border-radius:var(--radius-sm);padding:14px;f
           <div style="font-size:.8rem;color:var(--muted);margin-top:2px">Niños con servicio de comedor · Alergias destacadas</div>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-outline btn-sm" onclick="printComedor()">🖨️ Imprimir/PDF</button>
           <button class="btn btn-outline btn-sm" onclick="exportComedor()">📋 Exportar</button>
           <button class="btn btn-outline btn-sm" onclick="exitComedor()">Salir</button>
         </div>
@@ -1085,7 +1096,23 @@ function renderResults(){
     <button class="btn btn-success btn-sm" onclick="toggleEdit()">✅ Terminar edición</button>
   </div>
   <div id="exportArea" style="display:none;margin-bottom:14px"><pre class="export-text" id="exportText"></pre></div>
-  <div class="turno-tabs" id="turnoTabs">${turnoNames.map((t,i)=>`<button class="ttab${i===0?' active':''}" onclick="showTurno('${esc(t)}',this)">${t} · ${grupos[t].length} grupos</button>`).join('')}</div>
+
+  <!-- BUSCADOR -->
+  <div style="position:relative;margin-bottom:14px">
+    <input type="text" id="kidSearchInput" placeholder="🔍 Buscar niño por nombre o apellido..." 
+      oninput="searchKidInGroups(this.value)"
+      style="width:100%;padding:11px 16px;border:1.5px solid var(--border);border-radius:10px;font-family:'Instrument Sans',sans-serif;font-size:.88rem;outline:none;transition:border-color .2s"
+      onfocus="this.style.borderColor='var(--sky)'" onblur="this.style.borderColor='var(--border)'">
+    <div id="kidSearchResults" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.1);z-index:100;max-height:280px;overflow-y:auto"></div>
+  </div>
+
+  <div class="turno-tabs" id="turnoTabs">${turnoNames.map((t,i)=>{
+    const nKids = grupos[t].reduce((a,g)=>a+g.length,0);
+    const nCom = grupos[t].reduce((a,g)=>a+g.filter(k=>k.comedor).length,0);
+    return `<button class="ttab${i===0?' active':''}" onclick="showTurno('${esc(t)}',this)">
+      ${t}<br><span style="font-size:.65rem;font-weight:400;opacity:.8">${nKids} niños · 🍽️${nCom}</span>
+    </button>`;
+  }).join('')}</div>
   ${turnoNames.map((t,ti)=>`<div class="turno-panel" id="turno-${esc(t)}" style="display:${ti===0?'block':'none'}">
     <div class="grupos-grid" id="grid-${esc(t)}">${renderGruposGrid(t)}</div>
   </div>`).join('')}`;
@@ -1105,7 +1132,10 @@ function renderGruposGrid(turno){
     return `<div class="grupo-card" id="gcard-${esc(turno)}-${gi}" data-turno="${esc(turno)}" data-gi="${gi}">
       <div class="grupo-header" style="background:${color}">
         <span class="grupo-title">${groupName}</span>
-        <span class="grupo-meta">${grupo.length} niños · ${ageLabel} · 🍽️${comedorN}</span>
+        <span style="display:flex;align-items:center;gap:6px">
+          <span class="grupo-meta">${grupo.length} niños · ${ageLabel} · 🍽️${comedorN}</span>
+          <button onclick="openAddKidToGroup('${esc(turno)}',${gi})" title="Añadir niño" style="background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:6px;padding:2px 8px;cursor:pointer;font-size:.8rem;font-weight:700;font-family:'Instrument Sans',sans-serif">+ Añadir</button>
+        </span>
       </div>
       <div class="grupo-body">
         <div class="grupo-code-row">
@@ -1699,22 +1729,34 @@ function _initFirebase() {
             window._gruposFromFirebase = d;
             try { localStorage.setItem('campusGrupos3', JSON.stringify(grupos)); } catch(e) {}
             if (alreadyShowing) {
-              // Already showing from localStorage — just refresh silently
               renderResults();
               showToast('🔄 Grupos actualizados desde Firebase', 'info', 2000);
             } else {
-              // Nothing was showing yet — show now
               _showGrupos();
             }
           }
         } catch(e) { console.error('Error parsing grupos from Firebase:', e); }
       } else {
-        // Firebase empty but localStorage might have data — already handled in init
         if (Object.keys(grupos).length > 0) {
           showToast('💾 Grupos cargados desde caché local', 'info', 2000);
         }
       }
     }).catch(function(e) { console.error('Firebase read error:', e); });
+
+    // Load monitores from Firebase
+    window._fbDB.collection('campus').doc('monitores').get().then(function(snap) {
+      if (snap.exists) {
+        try {
+          var p = JSON.parse(snap.data().data);
+          if (p) {
+            _monitores = p.monitores || [];
+            _asignaciones = p.asignaciones || {};
+            _horarios = p.horarios || {};
+            try { localStorage.setItem('campusMonitores', JSON.stringify(p)); } catch(e) {}
+          }
+        } catch(e) { console.error('Error parsing monitores:', e); }
+      }
+    }).catch(function(e) { console.warn('Monitores Firebase error:', e); });
 
   } catch(e) {
     console.warn('Firebase init error:', e.message);
@@ -2447,31 +2489,43 @@ let _editingMonitorIdx = -1;
 // Load/save monitors from Firebase/localStorage
 function saveMonitoresData() {
   const data = {monitores: _monitores, asignaciones: _asignaciones, horarios: _horarios};
-  try { localStorage.setItem('campusMonitores', JSON.stringify(data)); } catch(e) {}
-  if(window._fbDB) {
-    window._fbDB.collection('campus').doc('monitores').set({data: JSON.stringify(data), updated: new Date()}).catch(console.error);
+  const json = JSON.stringify(data);
+  // Always save to localStorage immediately
+  try { localStorage.setItem('campusMonitores', json); } catch(e) {}
+  // Save to Firebase — retry if not ready yet
+  function doSave() {
+    if(window._fbDB) {
+      window._fbDB.collection('campus').doc('monitores').set({data: json, updated: new Date()})
+        .then(()=>showToast('🔥 Monitores guardados en Firebase ✅','success'))
+        .catch(e=>{ console.error('Error saving monitores:',e); showToast('💾 Guardado localmente (Firebase no disponible)','warn',3000); });
+    } else {
+      // Firebase not ready, retry in 1s
+      setTimeout(doSave, 1000);
+    }
   }
-  showToast('💾 Monitores guardados ✅', 'success');
+  doSave();
 }
 
 function loadMonitoresData() {
-  // Try localStorage first
-  try {
-    const d = localStorage.getItem('campusMonitores');
-    if(d) { const p=JSON.parse(d); _monitores=p.monitores||[]; _asignaciones=p.asignaciones||{}; _horarios=p.horarios||{}; }
-  } catch(e) {}
-  // Then Firebase
+  // Data already loaded at init from localStorage + Firebase
+  // Just re-render with what we have
+  renderMonitoresList();
+  // Refresh from Firebase in background if available
   if(window._fbDB) {
     window._fbDB.collection('campus').doc('monitores').get().then(snap => {
       if(snap.exists) {
         try {
           const p = JSON.parse(snap.data().data);
-          _monitores = p.monitores||[]; _asignaciones = p.asignaciones||{}; _horarios = p.horarios||{};
-          try { localStorage.setItem('campusMonitores', snap.data().data); } catch(e) {}
-          renderMonitoresList();
+          if(p && p.monitores) {
+            _monitores = p.monitores||[];
+            _asignaciones = p.asignaciones||{};
+            _horarios = p.horarios||{};
+            try { localStorage.setItem('campusMonitores', snap.data().data); } catch(e) {}
+            renderMonitoresList();
+          }
         } catch(e) {}
       }
-    }).catch(console.error);
+    }).catch(e => console.warn('loadMonitoresData error:', e));
   }
 }
 
@@ -2710,6 +2764,278 @@ function copyLink(id) {
 })();
 
 // Update showView to handle monitores
+
+// ══════════════════════════════════════════════
+// ENRICH MODE & COMEDOR EXPORT
+// ══════════════════════════════════════════════
+let _enrichMode = 'enrich'; // 'enrich' or 'generate'
+
+function setEnrichMode(mode) {
+  _enrichMode = mode;
+  document.getElementById('enrichModeBtn').className = 'btn btn-sm ' + (mode==='enrich'?'btn-primary':'btn-outline');
+  document.getElementById('generateModeBtn').className = 'btn btn-sm ' + (mode==='generate'?'btn-primary':'btn-outline');
+  const info = document.getElementById('enrichModeInfo');
+  if(mode==='enrich') {
+    info.style.cssText='font-size:.78rem;color:#1A7A40;background:#EDFBF3;border:1px solid #A8E6C0;border-radius:8px;padding:8px 12px;margin-bottom:14px';
+    info.textContent='✅ Modo enriquecer: solo se añaden alergias, comedor y observaciones. No se generan grupos nuevos.';
+  } else {
+    info.style.cssText='font-size:.78rem;color:#856404;background:#FFF8E6;border:1px solid #FFE69C;border-radius:8px;padding:8px 12px;margin-bottom:14px';
+    info.textContent='⚙️ Modo generar: se crearán grupos nuevos desde el formulario. Solo usar si no tienes grupos ya importados.';
+  }
+}
+
+function handleFormularioNext() {
+  if(_enrichMode === 'enrich' && Object.keys(grupos).length > 0) {
+    enrichGruposFromRawData();
+  } else {
+    goToMapping();
+  }
+}
+
+function enrichGruposFromRawData() {
+  if(!rawData.length) { alert('Primero sube el Excel del formulario.'); return; }
+
+  const ALERGIA_NEG = new Set(['no','no tiene','no tiene alergias','ninguna','ninguno','ninguna conocida','nada','no conocida','no tiene ninguna','ninguna alergia','no alergia','sin alergias','no tiene alergia','ninguna conocida hasta el momento','no conocidas']);
+  function cleanA(v){ if(!v) return ''; const vl=String(v).trim().toLowerCase().replace(/\.+$/,''); if(ALERGIA_NEG.has(vl)||/^no\b/.test(vl)||/^ninguna?\b/.test(vl)) return ''; return String(v).trim(); }
+  function isYes(v){ return /^(s[íi]|si|yes|1|true|x)$/i.test(String(v||'').trim()); }
+  function norm(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); }
+
+  // Build lookup from formulario data
+  // Try to auto-detect columns
+  const headers = Object.keys(rawData[0]||{});
+  const findCol = (keywords) => headers.find(h => keywords.some(k => norm(h).includes(norm(k))));
+
+  const colNombre = findCol(['nombre','name']) || headers[0];
+  const colApellidos = findCol(['apellidos','apellido','surname']);
+  const colAlergias = findCol(['alergia','alérgeno','alergeno','alérgicos','intolerancia']);
+  const colComedor = findCol(['comedor','almuerzo','lunch']);
+  const colMatinera = findCol(['matinera','madrugadores','madrugador']);
+  const colObs = findCol(['observacion','observación','nota','otros','comentario']);
+
+  const formularioData = {};
+  rawData.forEach(row => {
+    const nombre = String(row[colNombre]||'').trim();
+    const apellidos = colApellidos ? String(row[colApellidos]||'').trim() : '';
+    if(!nombre) return;
+    const key = norm(nombre + ' ' + apellidos);
+    const key2 = norm(nombre);
+    const data = {
+      alergias: cleanA(colAlergias ? row[colAlergias] : ''),
+      comedor: colComedor ? isYes(row[colComedor]) : false,
+      matinera: colMatinera ? isYes(row[colMatinera]) : false,
+      otros: colObs ? String(row[colObs]||'').trim() : '',
+    };
+    formularioData[key] = data;
+    formularioData[key2] = data;
+  });
+
+  let matched = 0, total = 0;
+  Object.keys(grupos).forEach(semana => {
+    grupos[semana].forEach(g => {
+      g.forEach(kid => {
+        total++;
+        const k1 = norm(fullName(kid));
+        const k2 = norm(kid.nombre);
+        const data = formularioData[k1] || formularioData[k2];
+        if(data) {
+          if(data.alergias) kid.alergias = data.alergias;
+          if(data.comedor) kid.comedor = true;
+          if(data.matinera) kid.matinera = true;
+          if(data.otros && !kid.otros) kid.otros = data.otros;
+          matched++;
+        }
+      });
+    });
+  });
+
+  saveToStorage();
+  _showGrupos();
+  showToast(`✅ Formulario cruzado: ${matched}/${total} niños enriquecidos con alergias y comedor`, 'success', 4000);
+}
+
+function printComedor() {
+  const turno = document.getElementById('comedorTurnoFilter').value;
+  const semanas = turno ? [turno] : Object.keys(grupos);
+  let html = `<html><head><title>Comedor Campus Apolana</title>
+  <style>body{font-family:Arial,sans-serif;font-size:11pt;margin:20px}
+  h1{font-size:14pt;margin-bottom:4px}h2{font-size:12pt;color:#555;margin:16px 0 6px}
+  table{width:100%;border-collapse:collapse;margin-bottom:16px}
+  th{background:#0A0E14;color:#FFB800;padding:6px 10px;text-align:left;font-size:10pt}
+  td{padding:5px 10px;border-bottom:1px solid #eee;font-size:10pt}
+  .alergia{color:#C00;font-weight:700}.chip{display:inline-block;background:#FFF3CD;border:1px solid #FFE69C;border-radius:3px;padding:1px 6px;font-size:9pt}
+  @media print{button{display:none}}</style></head><body>
+  <h1>🍽️ Lista de Comedor — Campus Apolana</h1>
+  <p style="color:#888;font-size:9pt">Generado: ${new Date().toLocaleDateString('es-ES')}</p>
+  <button onclick="window.print()" style="margin-bottom:16px;padding:8px 16px;background:#0A0E14;color:#FFB800;border:none;border-radius:6px;cursor:pointer;font-size:10pt">🖨️ Imprimir</button>`;
+
+  semanas.forEach(semana => {
+    if(!grupos[semana]) return;
+    const kids = [];
+    grupos[semana].forEach((g,gi) => {
+      g.filter(k=>k.comedor).forEach(k => {
+        kids.push({...k, grupo: getGroupName(gi)});
+      });
+    });
+    if(!kids.length) return;
+    html += `<h2>${semana} — ${kids.length} niños con comedor</h2>
+    <table><tr><th>#</th><th>Nombre</th><th>Grupo</th><th>Alergias</th></tr>`;
+    kids.forEach((k,i) => {
+      const ale = k.alergias ? `<span class="alergia">⚠️ ${k.alergias}</span>` : '<span style="color:#aaa">Sin alergias</span>';
+      html += `<tr><td>${i+1}</td><td><strong>${fullName(k)}</strong></td><td><span class="chip">${k.grupo}</span></td><td>${ale}</td></tr>`;
+    });
+    html += '</table>';
+  });
+
+  html += '</body></html>';
+  const win = window.open('','_blank');
+  win.document.write(html);
+  win.document.close();
+}
+
+// ══════════════════════════════════════════════
+// BUSCADOR DE NIÑOS
+// ══════════════════════════════════════════════
+function searchKidInGroups(q) {
+  const res = document.getElementById('kidSearchResults');
+  if(!q || q.trim().length < 2) { if(res) res.style.display='none'; return; }
+  const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+  const qn = norm(q);
+  const hits = [];
+  Object.keys(grupos).forEach(semana => {
+    grupos[semana].forEach((g, gi) => {
+      g.forEach(kid => {
+        const name = fullName(kid);
+        if(norm(name).includes(qn)) hits.push({name, semana, gi, kid});
+      });
+    });
+  });
+  if(!res) return;
+  if(!hits.length) {
+    res.style.display='block';
+    res.innerHTML='<div style="padding:14px 16px;color:#888;font-size:.85rem">😕 No encontrado</div>';
+    return;
+  }
+  res.style.display='block';
+  res.innerHTML = hits.slice(0,10).map(h => {
+    const color = getGroupColor(h.gi);
+    const gname = getGroupName(h.gi);
+    const ale = h.kid.alergias ? `<span style="color:#E74C3C;font-size:.7rem">⚠️ ${h.kid.alergias}</span>` : '';
+    const com = h.kid.comedor ? '<span style="color:#F39C12;font-size:.7rem">🍽️</span>' : '';
+    return `<div onclick="jumpToKid('${esc(h.semana)}',${h.gi},'${encodeURIComponent(h.name)}')"
+      style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #F0F2F5;display:flex;align-items:center;gap:10px;transition:background .15s"
+      onmouseover="this.style.background='#F7FAFF'" onmouseout="this.style.background='#fff'">
+      <div style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0"></div>
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:.85rem">${h.name}</div>
+        <div style="font-size:.72rem;color:#888">${h.semana} · ${gname} ${com} ${ale}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function jumpToKid(turnoEsc, gi, encodedName) {
+  const res = document.getElementById('kidSearchResults');
+  if(res) res.style.display='none';
+  const inp = document.getElementById('kidSearchInput');
+  if(inp) inp.value='';
+  document.querySelectorAll('.turno-panel').forEach(p=>p.style.display='none');
+  document.querySelectorAll('.ttab').forEach(b=>b.classList.remove('active'));
+  const panel = document.getElementById('turno-'+turnoEsc);
+  if(panel) { panel.style.display='block'; }
+  const name = decodeURIComponent(encodedName);
+  setTimeout(()=>{
+    document.querySelectorAll('.nino-row').forEach(el => {
+      if(el.dataset.nombre===name) {
+        el.scrollIntoView({behavior:'smooth', block:'center'});
+        el.style.transition='background .3s';
+        el.style.background='#FFF8E6';
+        setTimeout(()=>el.style.background='',2000);
+      }
+    });
+  },100);
+}
+
+document.addEventListener('click', function(e) {
+  const res = document.getElementById('kidSearchResults');
+  if(res && !e.target.closest('#kidSearchInput') && !e.target.closest('#kidSearchResults')) {
+    res.style.display='none';
+  }
+});
+
+// ══════════════════════════════════════════════
+// AÑADIR NIÑO A GRUPO EXISTENTE
+// ══════════════════════════════════════════════
+function openAddKidToGroup(turnoEsc, gi) {
+  const turno = Object.keys(grupos).find(t=>esc(t)===turnoEsc)||turnoEsc;
+  const gname = getGroupName(gi);
+  document.body.insertAdjacentHTML('beforeend',`
+    <div id="addKidModal" style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px">
+      <div style="background:#fff;border-radius:14px;padding:24px;max-width:440px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.25)">
+        <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;margin-bottom:4px">➕ Añadir niño</div>
+        <div style="font-size:.83rem;color:#888;margin-bottom:18px">${gname} · ${turno}</div>
+        <div class="field" style="margin-bottom:10px">
+          <label>Nombre</label>
+          <input type="text" id="addKid-nombre" placeholder="ej: Ana" style="margin-top:4px">
+        </div>
+        <div class="field" style="margin-bottom:10px">
+          <label>Apellidos</label>
+          <input type="text" id="addKid-apellidos" placeholder="ej: García Pérez" style="margin-top:4px">
+        </div>
+        <div style="display:flex;gap:10px;margin-bottom:10px">
+          <div class="field" style="flex:1">
+            <label>Año nac.</label>
+            <input type="text" id="addKid-ano" placeholder="2018" style="margin-top:4px">
+          </div>
+          <div class="field" style="flex:1">
+            <label>Comedor</label>
+            <select id="addKid-comedor" style="margin-top:4px"><option value="no">No</option><option value="si">Sí</option></select>
+          </div>
+          <div class="field" style="flex:1">
+            <label>Matinera</label>
+            <select id="addKid-matinera" style="margin-top:4px"><option value="no">No</option><option value="si">Sí</option></select>
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:10px">
+          <label>Alergias (opcional)</label>
+          <input type="text" id="addKid-alergias" placeholder="ej: Frutos secos" style="margin-top:4px">
+        </div>
+        <div class="field" style="margin-bottom:16px">
+          <label>Observaciones (opcional)</label>
+          <input type="text" id="addKid-obs" placeholder="ej: No sabe nadar" style="margin-top:4px">
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end">
+          <button onclick="document.getElementById('addKidModal').remove()" class="btn btn-outline">Cancelar</button>
+          <button onclick="confirmAddKid('${turnoEsc}',${gi})" class="btn btn-success">➕ Añadir</button>
+        </div>
+      </div>
+    </div>`);
+  setTimeout(()=>{ const n=document.getElementById('addKid-nombre'); if(n)n.focus(); },100);
+}
+
+function confirmAddKid(turnoEsc, gi) {
+  const turno = Object.keys(grupos).find(t=>esc(t)===turnoEsc)||turnoEsc;
+  const nombre = document.getElementById('addKid-nombre').value.trim();
+  const apellidos = document.getElementById('addKid-apellidos').value.trim();
+  if(!nombre) { alert('El nombre es obligatorio.'); return; }
+  const kid = {
+    id: String(Date.now())+String(Math.floor(Math.random()*100000)),
+    nombre, apellidos,
+    anoNac: document.getElementById('addKid-ano').value.trim(),
+    comedor: document.getElementById('addKid-comedor').value==='si',
+    matinera: document.getElementById('addKid-matinera').value==='si',
+    alergias: document.getElementById('addKid-alergias').value.trim(),
+    otros: document.getElementById('addKid-obs').value.trim(),
+    obs:'', amigos:[], edad:null,
+  };
+  if(!grupos[turno]) grupos[turno]=[];
+  while(grupos[turno].length<=gi) grupos[turno].push([]);
+  grupos[turno][gi].push(kid);
+  document.getElementById('addKidModal').remove();
+  saveToStorage();
+  refreshGrid(turno);
+  setupDragDrop();
+  showToast(`✅ ${nombre} añadido a ${getGroupName(gi)} · ${turno}`,'success');
+}
 
 // ══════════════════════════════════════════════
 (function() {
