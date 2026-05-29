@@ -9,6 +9,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
 window._grupos = null;
+window._fbReady = false;
 
 function _showSearch() {
   document.getElementById('loadingMsg').style.display = 'none';
@@ -21,15 +22,17 @@ function showError(msg) {
   document.getElementById('errorMsg').style.display = 'block';
 }
 
-// Load from localStorage immediately
-try {
-  var _lg = localStorage.getItem('campusGrupos3');
-  if(_lg) {
-    window._grupos = JSON.parse(_lg);
-    document.addEventListener('DOMContentLoaded', _showSearch);
-  }
-} catch(e) {}
+// Show search form immediately — don't block on Firebase
+document.addEventListener('DOMContentLoaded', function() {
+  // Try localStorage first
+  try {
+    var _lg = localStorage.getItem('campusGrupos3');
+    if(_lg) window._grupos = JSON.parse(_lg);
+  } catch(e) {}
+  _showSearch();
+});
 
+// Load Firebase in background
 setTimeout(function() {
   try {
     if (!firebase.apps.length) firebase.initializeApp({
@@ -47,20 +50,14 @@ setTimeout(function() {
           var d = JSON.parse(snap.data().data);
           if(d) {
             window._grupos = d;
+            window._fbReady = true;
             try { localStorage.setItem('campusGrupos3', JSON.stringify(d)); } catch(e) {}
           }
         } catch(e) {}
       }
-      _showSearch();
-    }).catch(function(e) {
-      console.error('Firebase error:', e);
-      _showSearch(); // Show with whatever we have from localStorage
-    });
-  } catch(e) {
-    console.error('Firebase init error:', e);
-    _showSearch();
-  }
-}, 400);
+    }).catch(function(e) { console.error('Firebase error:', e); });
+  } catch(e) { console.error('Firebase init error:', e); }
+}, 300);
 </script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -384,29 +381,40 @@ function searchKids(query) {
   return results;
 }
 
-let selectedKidName = null;
+
 
 // No suggestions — privacy protection
 
 function buscar() {
-  document.getElementById('suggestions').style.display = 'none';
-  const query = selectedKidName || document.getElementById('searchInput').value;
-  if (!query || query.length < 2) return;
+  const query = document.getElementById('searchInput').value.trim();
+  if (!query || query.length < 4) return;
+
+  const area = document.getElementById('resultArea');
+
+  if (!window._grupos || !Object.keys(window._grupos).length) {
+    // Firebase still loading — show message and retry
+    area.innerHTML = `<div class="result-card"><div class="not-found" style="padding:20px">
+      ⏳ Cargando datos del campus...<br><br>
+      <span style="font-size:.8rem;color:#8899AA">Espera un momento y vuelve a intentarlo.</span><br><br>
+      <button onclick="buscar()" style="background:#FFB800;color:#0A0E14;border:none;border-radius:8px;padding:10px 20px;font-weight:700;cursor:pointer;font-family:'Instrument Sans',sans-serif">Buscar de nuevo</button>
+    </div></div>`;
+    // Retry automatically in 2 seconds
+    setTimeout(function(){ if(window._grupos && Object.keys(window._grupos).length) buscar(); }, 2000);
+    return;
+  }
 
   const results = searchKids(query);
-  const area = document.getElementById('resultArea');
 
   if (!results.length) {
     area.innerHTML = `<div class="result-card"><div class="not-found">
       😕 No encontramos a <strong>${query}</strong> en los grupos.<br><br>
-      Puede que aún no se hayan publicado los grupos de tu semana,<br>
-      o comprueba que el nombre esté bien escrito.<br><br>
+      Comprueba que el nombre esté bien escrito (nombre y apellido).<br><br>
       <a href="mailto:itakadyr@gmail.com" style="color:#FFB800">Contacta con nosotros →</a>
     </div></div>`;
     return;
   }
 
-  // Group all results by kid name — show one card with all semanas
+  // Group by kid name — show one card with all semanas
   const byKid = {};
   results.forEach(entry => {
     const name = fullName(entry.kid);

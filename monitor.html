@@ -204,6 +204,8 @@ body{font-family:'Instrument Sans',sans-serif;background:#0A0E14;color:#fff;min-
       <div class="sum-pill sum-t">👥 <span id="cT">0</span></div>
     </div>
 
+    <div id="alergiaBanner" style="display:none;background:rgba(255,77,77,.12);border:1px solid rgba(255,77,77,.3);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:.78rem;color:#FF7070;line-height:1.5"></div>
+
     <div class="attend-list" id="attendList"></div>
 
     <div class="save-bar">
@@ -372,6 +374,24 @@ async function renderList(){
   const list=document.getElementById('attendList');
   list.innerHTML='';
 
+  // Allergy alert banner
+  const ALERGIA_NEG2 = new Set(['no','no tiene','no tiene alergias','ninguna','ninguno','ninguna conocida','nada','no conocida','no tiene ninguna','ninguna alergia','no alergia','sin alergias','no tiene alergia','ninguna conocida hasta el momento','no conocidas']);
+  function cleanA(v){ if(!v) return ''; const vl=v.trim().toLowerCase().replace(/\.+$/,''); if(ALERGIA_NEG2.has(vl)||/^no\b/.test(vl)||/^ninguna?\b/.test(vl)) return ''; return v.trim(); }
+  const kidsConAlergia = monitorGroup.kids.filter(k=>cleanA(k.alergias));
+  const alertBanner = document.getElementById('alergiaBanner');
+  if(alertBanner){
+    if(kidsConAlergia.length){
+      alertBanner.style.display='block';
+      alertBanner.innerHTML='⚠️ <strong>'+kidsConAlergia.length+' niño'+(kidsConAlergia.length>1?'s':'')+' con alergia en este grupo:</strong> '+
+        kidsConAlergia.map(k=>'<strong>'+(k.apellidos?k.nombre+' '+k.apellidos:k.nombre)+'</strong>: '+cleanA(k.alergias)).join(' · ');
+    } else {
+      alertBanner.style.display='none';
+    }
+  }
+
+  const ALERGIA_NEG = new Set(['no','no tiene','no tiene alergias','ninguna','ninguno','ninguna conocida','nada','no conocida','no tiene ninguna','ninguna alergia','no alergia','sin alergias','no tiene alergia','ninguna conocida hasta el momento','no conocidas']);
+  function cleanAlergia(v){ if(!v) return ''; const vl=v.trim().toLowerCase().replace(/\.+$/,''); if(ALERGIA_NEG.has(vl)||/^no\b/.test(vl)||/^ninguna?\b/.test(vl)) return ''; return v.trim(); }
+
   monitorGroup.kids.forEach(kid=>{
     const name=(kid.apellidos?kid.nombre+' '+kid.apellidos:kid.nombre);
     const status=saved[name]||saved[kid.nombre]||'pending';
@@ -380,16 +400,23 @@ async function renderList(){
     div.dataset.nombre=name;div.dataset.status=status;
     const initials=name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
     const icon=status==='present'?'✅':status==='absent'?'❌':'⬜';
-    const info=[(kid.edad?kid.edad+' años':null),(kid.anoNac?'n.'+kid.anoNac:null)].filter(Boolean).join(' · ');
+    const alergias = cleanAlergia(kid.alergias);
+    const otros = (kid.otros||'').trim();
+    const obs = (kid.obs||'').trim();
+
     div.innerHTML=`
       <div class="attend-avatar" style="background:${color}">${initials}</div>
-      <div style="flex:1">
+      <div style="flex:1;min-width:0">
         <div class="attend-name">${name}</div>
-        ${info?'<div class="attend-info">'+info+'</div>':''}
-        ${kid.comedor?'<span style="font-size:.65rem;color:#FFB800;background:rgba(255,184,0,.1);border:1px solid rgba(255,184,0,.2);border-radius:4px;padding:2px 6px;margin-top:3px;display:inline-block">🍽️ Comedor</span>':''}
-        ${kid.alergias?'<div class="attend-alergia">⚠️ '+kid.alergias+'</div>':''}
+        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px;align-items:center">
+          ${kid.comedor?'<span style="font-size:.68rem;color:#FFB800;background:rgba(255,184,0,.12);border:1px solid rgba(255,184,0,.3);border-radius:4px;padding:2px 7px;white-space:nowrap">🍽️ Comedor</span>':''}
+          ${kid.matinera?'<span style="font-size:.68rem;color:#aaa;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:4px;padding:2px 7px;white-space:nowrap">🌅 Matinera</span>':''}
+          ${alergias?`<span style="font-size:.68rem;color:#FF4D4D;background:rgba(255,77,77,.12);border:1px solid rgba(255,77,77,.3);border-radius:4px;padding:2px 7px;white-space:nowrap;font-weight:600">⚠️ ${alergias}</span>`:''}
+        </div>
+        ${otros?`<div style="font-size:.72rem;color:#8899AA;margin-top:4px;padding:4px 8px;background:rgba(255,255,255,.04);border-radius:6px;border-left:2px solid rgba(107,122,173,.4)">📝 ${otros}</div>`:''}
+        ${obs?`<div style="font-size:.72rem;color:#6B7AAD;margin-top:3px;padding:3px 8px;background:rgba(107,122,173,.08);border-radius:6px">🔒 ${obs}</div>`:''}
       </div>
-      <div class="attend-status">${icon}</div>`;
+      <div class="attend-status" style="flex-shrink:0">${icon}</div>`;
     div.onclick=()=>{
       const s=div.dataset.status;
       const n=s==='pending'?'present':s==='present'?'absent':'pending';
