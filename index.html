@@ -233,7 +233,7 @@ pre.export-text{background:#F6F8FA;border-radius:var(--radius-sm);padding:14px;f
     <button class="htab" onclick="showView('monitor')">🏃 Monitor</button>
     <button class="htab" onclick="showView('comedor')">🍽️ Comedor</button>
     <button class="htab" onclick="showView('monitores')">👥 Monitores</button>
-    <button class="htab" onclick="showView('ia')">🤖 Asistente IA</button>
+
   </div>
   <div class="header-badge badge-admin" id="modeBadge">ADMIN</div>
 </header>
@@ -262,44 +262,49 @@ pre.export-text{background:#F6F8FA;border-radius:var(--radius-sm);padding:14px;f
     <div class="panel active" id="panel1">
     <div class="card">
       <div class="card-title">📂 Importar datos</div>
-      <div class="card-desc">Elige qué quieres hacer:</div>
+      <div class="card-desc">Sube los grupos por semana o enriquece con el formulario de inscripción.</div>
 
-      <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap">
-        <button id="modeGruposBtn" onclick="setImportMode('grupos')" class="btn btn-primary" style="flex:1;justify-content:center">📋 Importar Excel de grupos ya hechos</button>
-        <button id="modeFormBtn" onclick="setImportMode('formulario')" class="btn btn-outline" style="flex:1;justify-content:center">📝 Importar formulario de inscripción</button>
+      <!-- MODE SELECTOR -->
+      <div style="display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap">
+        <button id="modeGruposBtn" onclick="setImportMode('grupos')" class="btn btn-primary" style="flex:1;justify-content:center;min-width:180px">📋 Grupos por semana</button>
+        <button id="modeFormBtn" onclick="setImportMode('formulario')" class="btn btn-outline" style="flex:1;justify-content:center;min-width:180px">📝 Enriquecer con formulario</button>
       </div>
 
-      <!-- MODO GRUPOS -->
+      <!-- MODO GRUPOS: tabs por semana -->
       <div id="modeGruposPanel">
-        <div class="alert alert-info" style="margin-bottom:14px">📋 Sube tu Excel de grupos (con pestañas por año: 2022-2021-2020, 2019-2018...). La app importa los grupos y cruza alergias/comedor automáticamente.</div>
-        <div id="dropZoneGrupos" ondragover="dragOver(event,'grupos')" ondragleave="dragLeave(event,'grupos')" ondrop="dropFile(event,'grupos')" style="border:2px dashed #C7D9FF;border-radius:12px;padding:32px 20px;text-align:center;background:#F7FAFF;transition:all .2s;margin-bottom:14px">
+        <div class="alert alert-info" style="margin-bottom:14px">📋 Selecciona la semana y sube el Excel de grupos de esa semana (con hoja TODOS + pestañas por año de nacimiento).</div>
+
+        <!-- Semana tabs -->
+        <div style="display:flex;gap:4px;margin-bottom:16px;flex-wrap:wrap">
+          <button class="ttab active" id="stab-0" onclick="selectSemanTab(0,this)">Semana 1<br><span style="font-size:.65rem;font-weight:400">29 jun–3 jul</span></button>
+          <button class="ttab" id="stab-1" onclick="selectSemanTab(1,this)">Semana 2<br><span style="font-size:.65rem;font-weight:400">6–10 jul</span></button>
+          <button class="ttab" id="stab-2" onclick="selectSemanTab(2,this)">Semana 3<br><span style="font-size:.65rem;font-weight:400">13–17 jul</span></button>
+          <button class="ttab" id="stab-3" onclick="selectSemanTab(3,this)">Semana 4<br><span style="font-size:.65rem;font-weight:400">20–24 jul</span></button>
+          <button class="ttab" id="stab-4" onclick="selectSemanTab(4,this)">Semana 5<br><span style="font-size:.65rem;font-weight:400">27–31 jul</span></button>
+        </div>
+
+        <!-- Status per semana -->
+        <div id="semana-status-bar" style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap"></div>
+
+        <!-- Drop zone -->
+        <div id="dropZoneGrupos" ondragover="dragOver(event,'grupos')" ondragleave="dragLeave(event,'grupos')" ondrop="dropFile(event,'grupos')" style="border:2px dashed #C7D9FF;border-radius:12px;padding:28px 20px;text-align:center;background:#F7FAFF;transition:all .2s;margin-bottom:12px">
           <div style="font-size:2rem;margin-bottom:8px">📊</div>
-          <div style="font-weight:600;color:#0066FF;margin-bottom:8px">Arrastra el Excel de grupos aquí</div>
-          <div style="font-size:.78rem;color:#888;margin-bottom:14px">Formato: hoja TODOS + pestañas por año de nacimiento</div>
+          <div style="font-weight:600;color:#0066FF;margin-bottom:6px">Arrastra el Excel de grupos aquí</div>
+          <div style="font-size:.75rem;color:#888;margin-bottom:12px">Formato: hoja TODOS + pestañas por año (2022-2021-2020, 2019-2018...)</div>
           <label for="fileInputGrupos" style="display:inline-block;padding:9px 20px;background:#0066FF;color:white;border-radius:8px;cursor:pointer;font-weight:600;font-size:.85rem;font-family:'Instrument Sans',sans-serif">📂 Seleccionar archivo</label>
           <input type="file" id="fileInputGrupos" accept=".xlsx,.xls" style="position:absolute;opacity:0;width:1px;height:1px" onchange="loadGruposExcel(this.files[0])">
         </div>
         <div id="gruposImportStatus"></div>
         <div id="gruposImportSemana" style="display:none;margin-top:10px">
-          <div class="field" style="max-width:300px">
-            <label>¿A qué semana corresponde este Excel?</label>
-            <select id="gruposImportSemanaSelect" style="margin-top:4px">
-              <option value="">— Selecciona semana —</option>
-              <option value="Semana 1">Semana 1 (29 jun – 3 jul)</option>
-              <option value="Semana 2">Semana 2 (6 – 10 jul)</option>
-              <option value="Semana 3">Semana 3 (13 – 17 jul)</option>
-              <option value="Semana 4">Semana 4 (20 – 24 jul)</option>
-              <option value="Semana 5">Semana 5 (27 – 31 jul)</option>
-            </select>
-          </div>
-          <button class="btn btn-success" style="margin-top:12px" onclick="confirmGruposImport()">✅ Importar grupos</button>
+          <input type="hidden" id="gruposImportSemanaSelect" value="">
+          <button class="btn btn-success" onclick="confirmGruposImport()">✅ Importar en <span id="semana-btn-label">Semana 1</span></button>
         </div>
       </div>
 
       <!-- MODO FORMULARIO -->
       <div id="modeFormPanel" style="display:none">
-        <div class="alert alert-info" style="margin-bottom:14px">📝 Sube el Excel de Google Forms. Si ya tienes grupos guardados, los nuevos inscritos se añaden sin borrar nada.</div>
-        <div id="dropZone" ondragover="dragOver(event,'form')" ondragleave="dragLeave(event,'form')" ondrop="dropFile(event,'form')" style="border:2px dashed #C7D9FF;border-radius:12px;padding:32px 20px;text-align:center;background:#F7FAFF;transition:all .2s;margin-bottom:14px">
+        <div class="alert alert-info" style="margin-bottom:14px">📝 Sube el Excel del formulario de Google Forms. La app cruza por nombre y <strong>solo añade</strong> alergias, comedor y observaciones a los niños ya asignados a grupos. No borra ni mueve a nadie.</div>
+        <div id="dropZone" ondragover="dragOver(event,'form')" ondragleave="dragLeave(event,'form')" ondrop="dropFile(event,'form')" style="border:2px dashed #C7D9FF;border-radius:12px;padding:28px 20px;text-align:center;background:#F7FAFF;transition:all .2s;margin-bottom:14px">
           <div style="font-size:2rem;margin-bottom:8px">📊</div>
           <div style="font-weight:600;color:#0066FF;margin-bottom:8px">Arrastra el Excel del formulario aquí</div>
           <label for="fileInput" style="display:inline-block;padding:9px 20px;background:#0066FF;color:white;border-radius:8px;cursor:pointer;font-weight:600;font-size:.85rem;font-family:'Instrument Sans',sans-serif">📂 Seleccionar archivo</label>
@@ -2055,7 +2060,37 @@ function getGroupIdxFromCode(code,semana){
 // ══════════════════════════════════════════════
 // IMPORT MODE SWITCH
 // ══════════════════════════════════════════════
-let importMode = 'grupos';
+let _currentSemanTab = 0;
+
+function selectSemanTab(idx, btn) {
+  _currentSemanTab = idx;
+  document.querySelectorAll('[id^="stab-"]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  // Update hidden select
+  const semana = CAMPUS_WEEKS[idx].label;
+  document.getElementById('gruposImportSemanaSelect').value = semana;
+  document.getElementById('semana-btn-label').textContent = semana;
+  // Reset status
+  document.getElementById('gruposImportStatus').innerHTML = '';
+  document.getElementById('gruposImportSemana').style.display = 'none';
+  // Reset file input
+  document.getElementById('fileInputGrupos').value = '';
+}
+
+function updateSemanStatusBar() {
+  const bar = document.getElementById('semana-status-bar');
+  if(!bar) return;
+  bar.innerHTML = CAMPUS_WEEKS.map((w,wi) => {
+    const hasData = grupos[w.label] && grupos[w.label].length > 0;
+    const count = hasData ? grupos[w.label].reduce((a,g)=>a+g.length,0) : 0;
+    return `<span style="font-size:.72rem;padding:4px 10px;border-radius:20px;font-weight:600;${hasData
+      ? 'background:#EDFBF3;color:#1A7A40;border:1px solid #A8E6C0'
+      : 'background:#F8F9FA;color:#aaa;border:1px solid #E0E6ED'}">
+      ${w.label}: ${hasData ? count+' niños ✅' : 'sin datos'}
+    </span>`;
+  }).join('');
+}
+
 function setImportMode(mode) {
   importMode = mode;
   document.getElementById('modeGruposPanel').style.display = mode==='grupos' ? 'block' : 'none';
@@ -2063,6 +2098,7 @@ function setImportMode(mode) {
   document.getElementById('modeGruposBtn').className = 'btn ' + (mode==='grupos' ? 'btn-primary' : 'btn-outline');
   document.getElementById('modeFormBtn').className = 'btn ' + (mode==='formulario' ? 'btn-primary' : 'btn-outline');
   document.getElementById('nextBtn').style.display = mode==='formulario' ? 'inline-flex' : 'none';
+  if(mode==='grupos') updateSemanStatusBar();
 }
 
 // ══════════════════════════════════════════════
@@ -2130,6 +2166,10 @@ async function loadGruposExcel(file) {
       <span style="font-size:.78rem;color:#555">Grupos: ${Object.keys(result).join(', ')}</span>
     </div>`;
     document.getElementById('gruposImportSemana').style.display = 'block';
+    // Auto-set semana from current tab
+    const semanaAuto = CAMPUS_WEEKS[_currentSemanTab].label;
+    document.getElementById('gruposImportSemanaSelect').value = semanaAuto;
+    document.getElementById('semana-btn-label').textContent = semanaAuto;
 
   } catch(e) {
     status.innerHTML = `<div class="alert" style="background:#FFE0E0;border:1px solid #FFC0C0;border-radius:8px;padding:10px 14px;font-size:.82rem;color:#C00">❌ Error leyendo el archivo: ${e.message}</div>`;
@@ -2267,8 +2307,9 @@ function crossReference(groups, allKidsData) {
 }
 
 function confirmGruposImport() {
-  const semana = document.getElementById('gruposImportSemanaSelect').value;
-  if(!semana) { alert('Selecciona la semana antes de importar.'); return; }
+  const semana = document.getElementById('gruposImportSemanaSelect').value ||
+                 CAMPUS_WEEKS[_currentSemanTab].label;
+  if(!semana) { alert('Selecciona la semana primero.'); return; }
   if(!_gruposExcelParsed) { alert('Primero sube el Excel.'); return; }
 
   // Merge into grupos object preserving existing
@@ -2311,6 +2352,7 @@ function confirmGruposImport() {
   if(window._saveGruposFirebase) window._saveGruposFirebase(grupos);
   _showGrupos();
   showToast('🔥 '+ grupos[semana].length +' grupos guardados ✅','success',3000);
+  updateSemanStatusBar();
 
   document.getElementById('gruposImportStatus').innerHTML = `<div class="alert alert-success">
     ✅ <strong>${semana}</strong> importada: ${totalGrupos} grupos, ${total} niños.
@@ -2685,9 +2727,9 @@ function copyLink(id) {
       if (parsed && Object.keys(parsed).length > 0) {
         grupos = parsed;
         if (document.readyState === 'loading') {
-          document.addEventListener('DOMContentLoaded', function() { _showGrupos(); });
+          document.addEventListener('DOMContentLoaded', function() { _showGrupos(); setTimeout(updateSemanStatusBar,100); });
         } else {
-          _showGrupos();
+          _showGrupos(); setTimeout(updateSemanStatusBar,100);
         }
       }
     }
