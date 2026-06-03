@@ -418,9 +418,9 @@ pre.export-text{background:#F6F8FA;border-radius:var(--radius-sm);padding:14px;f
     <div id="resultsArea">
       <div class="no-data">
         <div class="ico">📊</div>
-        <p style="margin-bottom:8px">Cargando grupos desde Firebase...</p>
-        <p style="font-size:.75rem;color:#aaa;margin-bottom:16px">Si los grupos no aparecen en unos segundos, pulsa el botón</p>
-        <button class="btn btn-primary" onclick="forceLoadGroups()" style="margin:0 auto">🔄 Cargar grupos</button>
+        <p style="margin-bottom:8px;font-size:.9rem">Pulsa para cargar los grupos</p>
+        <button class="btn btn-primary" onclick="forceLoadGroups()" style="margin:0 auto;font-size:1rem;padding:14px 28px">🔄 Cargar grupos</button>
+        <p style="font-size:.72rem;color:#aaa;margin-top:12px" id="loadingStatus">Conectando con Firebase...</p>
       </div>
     </div>
     </div>
@@ -1724,6 +1724,8 @@ function _initFirebase() {
     if (b) { b.textContent = '🔥 Firebase conectado — datos en tiempo real.'; b.style.cssText = 'display:block;background:#EDFBF3;color:#1A7A40;border:1px solid #A8E6C0;border-radius:8px;padding:9px 14px;font-size:.78rem;margin-bottom:14px'; }
 
     // Load grupos from Firebase
+    var ls = document.getElementById('loadingStatus');
+    if(ls) ls.textContent = '🔥 Firebase conectado, cargando datos...';
     window._fbDB.collection('campus').doc('grupos').get().then(function(snap) {
       if (snap.exists) {
         try {
@@ -1732,16 +1734,24 @@ function _initFirebase() {
             grupos = d;
             window._gruposFromFirebase = d;
             try { localStorage.setItem('campusGrupos3', JSON.stringify(grupos)); } catch(e) {}
-            // Always render — works for both first load (mobile) and refresh (desktop)
-            _showGrupos();
+            // Auto-show grupos
+            if(ls) ls.textContent = '✅ Datos cargados — mostrando grupos...';
+            setTimeout(function(){ _showGrupos(); }, 100);
+          } else {
+            if(ls) ls.textContent = '⚠️ No hay grupos en Firebase aún.';
           }
-        } catch(e) { console.error('Error parsing grupos:', e); }
+        } catch(e) {
+          console.error('Error parsing grupos:', e);
+          if(ls) ls.textContent = '❌ Error al leer datos: ' + e.message;
+        }
       } else {
-        if (Object.keys(grupos).length > 0) _showGrupos();
+        if(ls) ls.textContent = '⚠️ No hay grupos guardados en Firebase.';
+        if (Object.keys(grupos).length > 0) setTimeout(function(){ _showGrupos(); }, 100);
       }
     }).catch(function(e) {
       console.error('Firebase read error:', e);
-      if (Object.keys(grupos).length > 0) _showGrupos();
+      if(ls) ls.textContent = '❌ Error Firebase: ' + e.message;
+      if (Object.keys(grupos).length > 0) setTimeout(function(){ _showGrupos(); }, 100);
     });
 
     // Load monitores from Firebase
