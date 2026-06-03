@@ -1473,13 +1473,16 @@ function enterPin(){
   }
 
   if(!found){document.getElementById('pinError').style.display='block';return;}
-  monitorGroup=found;
   currentDateOffset=getCurrentDayIdx();
+  // If monitor code, try to find the correct group for the current week
+  var wi = getWeekIdxForDay(currentDateOffset);
+  var weekGroup = getMonitorGroupForWeek(pin, wi);
+  monitorGroup = weekGroup || found;
   document.getElementById('pinScreen').style.display='none';
   document.getElementById('attendScreen').style.display='block';
-  const ages=found.kids.map(k=>k.edad).filter(Boolean);
-  document.getElementById('monGrupoTitle').textContent=`Grupo ${found.groupIdx+1} · ${found.turno}`;
-  document.getElementById('monGrupoSub').textContent=`${found.kids.length} niños · ${ages.length?Math.min(...ages)+'-'+Math.max(...ages)+' años':'?'} · Código: ${found.code}`;
+  const ages=monitorGroup.kids.map(k=>k.edad).filter(Boolean);
+  document.getElementById('monGrupoTitle').textContent=(monitorGroup.monitorNombre||'Monitor')+' · '+monitorGroup.turno;
+  document.getElementById('monGrupoSub').textContent=monitorGroup.kids.length+' niños · '+(ages.length?Math.min(...ages)+'-'+Math.max(...ages)+' años':'?')+' · '+getGroupName(monitorGroup.groupIdx);
   // Week jump buttons
   const wj=document.getElementById('weekJumps');
   if(wj){let c=0;wj.innerHTML=CAMPUS_WEEKS.map(function(w,wi){var fi=c;c+=getWeekDays(wi).length;return'<button class="ttab" style="font-size:.72rem;padding:5px 10px" onclick="jumpToWeek('+fi+')">'+w.label+'</button>';}).join('');}
@@ -1950,8 +1953,47 @@ function getCurrentDayIdx(){var all=getAllCampusDays(),today=new Date();today.se
 function getWeekIdxForDay(di){var count=0;for(var wi=0;wi<CAMPUS_WEEKS.length;wi++){var days=getWeekDays(wi);if(di<count+days.length)return wi;count+=days.length;}return CAMPUS_WEEKS.length-1;}
 function getDateStr(di){var all=getAllCampusDays();return dateToStr(all[Math.max(0,Math.min(di,all.length-1))]);}
 function getDateLabel(di){var all=getAllCampusDays(),idx=Math.max(0,Math.min(di,all.length-1)),d=all[idx],wi=getWeekIdxForDay(idx);return{label:formatDayLabel(d),badge:CAMPUS_WEEKS[wi].label+' · '+d.toLocaleDateString('es-ES')};}
-function changeDay(delta){var all=getAllCampusDays();currentDateOffset=Math.max(0,Math.min(currentDateOffset+delta,all.length-1));renderAttendList();document.getElementById('histSection').style.display='none';}
-function jumpToWeek(di){currentDateOffset=di;renderAttendList();document.getElementById('histSection').style.display='none';}
+function getMonitorGroupForWeek(pin, weeksIdx) {
+  // Given a monitor's pin code and a week index, find their assigned group for that week
+  var monRaw = window._monitores && window._asignaciones ? {monitores:window._monitores, asignaciones:window._asignaciones} : null;
+  if(!monRaw) { try { var m=localStorage.getItem('campusMonitores'); if(m) monRaw=JSON.parse(m); } catch(e){} }
+  if(!monRaw || !monRaw.monitores) return null;
+  var mon = monRaw.monitores.find(function(m){ return m.codigo===pin; });
+  if(!mon) return null;
+  var asig = monRaw.asignaciones||{};
+  var weekLabel = CAMPUS_WEEKS[weeksIdx] ? CAMPUS_WEEKS[weeksIdx].label : null;
+  if(!weekLabel) return null;
+  var found = null;
+  // Find which semana key matches this week label
+  Object.keys(asig).forEach(function(semana) {
+    if(semana === weekLabel || semana.indexOf('Semana '+(weeksIdx+1)) === 0) {
+      Object.entries(asig[semana]).forEach(function(entry) {
+        var gi=entry[0], codigo=entry[1];
+        if(codigo===pin && grupos[semana] && grupos[semana][parseInt(gi)]) {
+          found = {turno:semana, groupIdx:parseInt(gi), kids:grupos[semana][parseInt(gi)], code:pin, monitorNombre:mon.nombre};
+        }
+      });
+    }
+  });
+  return found;
+}
+
+function updateMonitorGroupForCurrentWeek() {
+  if(!monitorGroup || !monitorGroup.code) return;
+  // Only update if this is a named monitor (not auto code)
+  var pin = monitorGroup.code;
+  var wi = getWeekIdxForDay(currentDateOffset);
+  var newGroup = getMonitorGroupForWeek(pin, wi);
+  if(newGroup) {
+    monitorGroup = newGroup;
+    var ages = newGroup.kids.map(function(k){return k.edad;}).filter(Boolean);
+    document.getElementById('monGrupoTitle').textContent = (newGroup.monitorNombre||'Monitor') + ' · ' + newGroup.turno;
+    document.getElementById('monGrupoSub').textContent = newGroup.kids.length + ' niños · ' + (ages.length?Math.min(...ages)+'-'+Math.max(...ages)+' años':'?') + ' · ' + getGroupName(newGroup.groupIdx);
+  }
+}
+
+function changeDay(delta){var all=getAllCampusDays();currentDateOffset=Math.max(0,Math.min(currentDateOffset+delta,all.length-1));updateMonitorGroupForCurrentWeek();renderAttendList();document.getElementById('histSection').style.display='none';}
+function jumpToWeek(di){currentDateOffset=di;updateMonitorGroupForCurrentWeek();renderAttendList();document.getElementById('histSection').style.display='none';}
 
 // ══════════════════════════════════════════════
 // HELPERS
