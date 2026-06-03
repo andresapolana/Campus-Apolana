@@ -6,8 +6,8 @@
 <title>Campus Verano — Manager Pro</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Instrument+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js" onerror="console.error('Firebase app script failed to load')"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js" onerror="console.error('Firebase firestore script failed to load')"></script>
 <style>
 :root {
   --sun:#FFB800; --sky:#0066FF; --grass:#00C46A; --coral:#FF4D4D;
@@ -2983,28 +2983,7 @@ function printComedor() {
     html += '</table>';
   });
 
-  html += '<!-- ══════════ LOGIN SCREEN ══════════ -->
-<div id="loginScreen" style="position:fixed;inset:0;background:var(--dark);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px">
-  <div style="background:#fff;border-radius:18px;padding:36px 32px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.4);text-align:center">
-    <img id="loginLogo" style="width:64px;height:64px;border-radius:50%;object-fit:cover;margin-bottom:16px">
-    <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.4rem;margin-bottom:4px;color:var(--dark)">Campus Apolana</div>
-    <div style="font-size:.83rem;color:#888;margin-bottom:24px">Panel de administración</div>
-    <div style="text-align:left;margin-bottom:12px">
-      <label style="font-size:.75rem;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:.5px">Contraseña</label>
-      <input type="password" id="loginPassword" placeholder="Contraseña de acceso"
-        style="width:100%;margin-top:6px;padding:12px 14px;border:1.5px solid #E0E6ED;border-radius:10px;font-family:'Instrument Sans',sans-serif;font-size:.95rem;outline:none;box-sizing:border-box;transition:border-color .2s"
-        onfocus="this.style.borderColor='#0066FF'" onblur="this.style.borderColor='#E0E6ED'"
-        onkeydown="if(event.key==='Enter')checkLogin()">
-      <div id="loginError" style="display:none;color:#E74C3C;font-size:.78rem;margin-top:6px">Contraseña incorrecta.</div>
-    </div>
-    <button onclick="checkLogin()" style="width:100%;padding:13px;background:var(--dark);color:#FFB800;border:none;border-radius:10px;font-family:'Syne',sans-serif;font-weight:700;font-size:.95rem;cursor:pointer;transition:opacity .2s" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
-      Entrar →
-    </button>
-    <div style="margin-top:16px;font-size:.72rem;color:#ccc">Campus Apolana · Ítaka DYR</div>
-  </div>
-</div>
 
-</body></html>';
   const win = window.open('','_blank');
   win.document.write(html);
   win.document.close();
@@ -3490,5 +3469,25 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 </script>
+
+<!-- ══════════ LOGIN SCREEN ══════════ -->
+<div id="loginScreen" style="position:fixed;inset:0;background:#0A0E14;z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:18px;padding:36px 32px;max-width:360px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5)">
+    <div style="font-size:2rem;margin-bottom:8px">🏕️</div>
+    <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.4rem;margin-bottom:4px;color:#0A0E14">Campus Apolana</div>
+    <div style="font-size:.83rem;color:#888;margin-bottom:24px">Panel de administración</div>
+    <div style="text-align:left;margin-bottom:16px">
+      <label style="font-size:.75rem;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px">Contraseña</label>
+      <input type="password" id="loginPassword" placeholder="Contraseña de acceso"
+        style="width:100%;padding:12px 14px;border:1.5px solid #E0E6ED;border-radius:10px;font-family:'Instrument Sans',sans-serif;font-size:.95rem;outline:none;box-sizing:border-box;transition:border-color .2s"
+        onkeydown="if(event.key==='Enter')checkLogin()">
+      <div id="loginError" style="display:none;color:#E74C3C;font-size:.78rem;margin-top:6px">❌ Contraseña incorrecta.</div>
+    </div>
+    <button onclick="checkLogin()" style="width:100%;padding:13px;background:#0A0E14;color:#FFB800;border:none;border-radius:10px;font-family:'Syne',sans-serif;font-weight:700;font-size:.95rem;cursor:pointer;transition:opacity .2s" onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">
+      Entrar →
+    </button>
+    <div style="margin-top:16px;font-size:.72rem;color:#ccc">Ítaka DYR · Apolana · Campus 2025</div>
+  </div>
+</div>
 </body>
 </html>

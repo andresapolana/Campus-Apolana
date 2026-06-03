@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Campus Apolana — Monitor</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js" onerror="console.error('Firebase app script failed to load')"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js" onerror="console.error('Firebase firestore script failed to load')"></script>
 <script>
 window._fbDB = null;
 window._fbStatus = 'connecting';
@@ -16,22 +16,22 @@ function _showMonitorPin() {
   document.getElementById('pinSection').style.display='flex';
 }
 
-// Try localStorage immediately (no waiting)
+// Load from localStorage IMMEDIATELY — no waiting
 try {
   const g = localStorage.getItem('campusGrupos3');
   if(g) window._grupos = JSON.parse(g);
   const m = localStorage.getItem('campusMonitores');
-  if(m) { const p=JSON.parse(m); window._monitoresData=p; }
+  if(m) window._monitoresData = JSON.parse(m);
 } catch(e) {}
 
-// Show pin screen immediately if we have data from localStorage
-if(window._grupos && Object.keys(window._grupos).length) {
-  document.addEventListener('DOMContentLoaded', _showMonitorPin);
-}
+// Show pin screen RIGHT AWAY regardless of Firebase
+document.addEventListener('DOMContentLoaded', _showMonitorPin);
+// Also show after 2s max wait regardless
+setTimeout(_showMonitorPin, 2000);
 
 function _initMonitorFirebase() {
-  if(typeof firebase === 'undefined' || !firebase.firestore) {
-    setTimeout(_initMonitorFirebase, 400);
+  if(typeof firebase === 'undefined' || typeof firebase.firestore !== 'function') {
+    setTimeout(_initMonitorFirebase, 500);
     return;
   }
   try {
@@ -74,12 +74,13 @@ function _initMonitorFirebase() {
   } catch(e) {
     console.error('Firebase init error:', e);
     var cs = document.getElementById('connStatus');
-    if(cs) { cs.textContent='🔴 Sin conexión'; cs.style.color='#FF4D4D'; }
-    _showMonitorPin();
+    if(cs) { cs.textContent='🔴 Sin conexión Firebase'; cs.style.color='#FF4D4D'; }
     setTimeout(_initMonitorFirebase, 3000);
   }
 }
-setTimeout(_initMonitorFirebase, 300);
+// Start Firebase in background — don't block pin screen
+setTimeout(_initMonitorFirebase, 500);
+window.addEventListener('load', function(){ if(!window._fbDB) setTimeout(_initMonitorFirebase, 1000); });
 </script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
