@@ -33,9 +33,11 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Load Firebase — robust for mobile
+var _fbRetries = 0;
 function _initPadresFirebase() {
+  _fbRetries++;
   if (typeof firebase === 'undefined' || !firebase.firestore) {
-    setTimeout(_initPadresFirebase, 400);
+    if(_fbRetries < 20) setTimeout(_initPadresFirebase, 500);
     return;
   }
   try {
@@ -57,19 +59,22 @@ function _initPadresFirebase() {
             window._fbReady = true;
             try { localStorage.setItem('campusGrupos3', JSON.stringify(d)); } catch(e) {}
           }
-        } catch(e) {}
+        } catch(e) { console.error('Parse error:', e); }
       }
     }).catch(function(e) {
       console.warn('Firebase read error:', e);
-      // Retry once more after 3s
-      setTimeout(_initPadresFirebase, 3000);
+      setTimeout(_initPadresFirebase, 2000);
     });
   } catch(e) {
     console.warn('Firebase init error:', e);
-    setTimeout(_initPadresFirebase, 3000);
+    setTimeout(_initPadresFirebase, 2000);
   }
 }
-setTimeout(_initPadresFirebase, 300);
+// Start immediately and also after DOM ready
+_initPadresFirebase();
+document.addEventListener('DOMContentLoaded', function() {
+  if(!window._fbReady) setTimeout(_initPadresFirebase, 500);
+});
 </script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -404,26 +409,20 @@ function buscar() {
   const area = document.getElementById('resultArea');
 
   if (!window._grupos || !Object.keys(window._grupos).length) {
-    area.innerHTML = `<div class="result-card"><div class="not-found" style="padding:20px">
-      ⏳ Cargando datos del campus...<br><br>
-      <span style="font-size:.8rem;color:#8899AA">Espera un momento, conectando con el servidor.</span>
+    // Try localStorage one more time
+    try {
+      var g = localStorage.getItem('campusGrupos3');
+      if(g) { window._grupos = JSON.parse(g); }
+    } catch(e) {}
+  }
+  if (!window._grupos || !Object.keys(window._grupos).length) {
+    area.innerHTML = `<div class="result-card"><div class="not-found" style="padding:24px;text-align:center">
+      ⏳ Los datos aún se están cargando.<br><br>
+      <span style="font-size:.82rem;color:#8899AA">Espera unos segundos y pulsa de nuevo.</span><br><br>
+      <button onclick="buscar()" style="background:#FFB800;color:#0A0E14;border:none;border-radius:10px;padding:12px 24px;font-weight:700;cursor:pointer;font-size:.9rem;font-family:'Instrument Sans',sans-serif;margin-top:8px">🔄 Buscar de nuevo</button>
     </div></div>`;
-    // Retry automatically every second up to 10 times
-    var retries = 0;
-    var retryInterval = setInterval(function() {
-      retries++;
-      if(window._grupos && Object.keys(window._grupos).length) {
-        clearInterval(retryInterval);
-        buscar();
-      } else if(retries >= 10) {
-        clearInterval(retryInterval);
-        area.innerHTML = `<div class="result-card"><div class="not-found" style="padding:20px">
-          ❌ No se pudieron cargar los datos.<br><br>
-          Comprueba tu conexión y recarga la página.<br><br>
-          <a href="mailto:itakadyr@gmail.com" style="color:#FFB800">Contacta con nosotros →</a>
-        </div></div>`;
-      }
-    }, 1000);
+    // Still retry in background
+    setTimeout(function(){ if(window._grupos && Object.keys(window._grupos).length) buscar(); }, 2000);
     return;
   }
 
