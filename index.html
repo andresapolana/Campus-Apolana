@@ -252,11 +252,20 @@ pre.export-text{background:#F6F8FA;border-radius:var(--radius-sm);padding:14px;f
     <button class="btn btn-outline btn-sm" onclick="document.getElementById('savedGroupsBanner').style.display='none'">Ignorar</button>
   </div>
 
-  <div class="steps">
-    <button class="step-btn active" onclick="goStep(1)" id="step1btn"><div class="step-num">1</div>Datos</button>
-    <button class="step-btn" onclick="goStep(2)" id="step2btn"><div class="step-num">2</div>Columnas</button>
-    <button class="step-btn" onclick="goStep(3)" id="step3btn"><div class="step-num">3</div>Ajustes</button>
-    <button class="step-btn" onclick="goStep(4)" id="step4btn"><div class="step-num">4</div>Grupos</button>
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20px">
+    <div class="steps" style="flex:1">
+      <button class="step-btn active" onclick="goStep(1)" id="step1btn"><div class="step-num">1</div>Datos</button>
+      <button class="step-btn" onclick="goStep(2)" id="step2btn"><div class="step-num">2</div>Columnas</button>
+      <button class="step-btn" onclick="goStep(3)" id="step3btn"><div class="step-num">3</div>Ajustes</button>
+      <button class="step-btn" onclick="goStep(4)" id="step4btn"><div class="step-num">4</div>Grupos</button>
+    </div>
+    <div style="position:relative;min-width:220px;max-width:320px;flex:1">
+      <input type="text" id="kidSearchInput" placeholder="🔍 Buscar niño..." 
+        oninput="searchKidInGroups(this.value)"
+        style="width:100%;padding:9px 14px;border:1.5px solid var(--border);border-radius:20px;font-family:'Instrument Sans',sans-serif;font-size:.82rem;outline:none;transition:border-color .2s;background:#fff"
+        onfocus="this.style.borderColor='var(--sky)'" onblur="this.style.borderColor='var(--border)'">
+      <div id="kidSearchResults" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.1);z-index:100;max-height:280px;overflow-y:auto"></div>
+    </div>
   </div>
 
   <!-- PASO 1 -->
@@ -297,7 +306,7 @@ pre.export-text{background:#F6F8FA;border-radius:var(--radius-sm);padding:14px;f
         </div>
         <div id="gruposImportStatus"></div>
         <div id="gruposImportSemana" style="display:none;margin-top:10px">
-          <input type="hidden" id="gruposImportSemanaSelect" value="">
+          <input type="hidden" id="gruposImportSemanaSelect" value="Semana 1">
           <button class="btn btn-success" onclick="confirmGruposImport()">✅ Importar en <span id="semana-btn-label">Semana 1</span></button>
         </div>
       </div>
@@ -409,7 +418,8 @@ pre.export-text{background:#F6F8FA;border-radius:var(--radius-sm);padding:14px;f
     <div id="resultsArea">
       <div class="no-data">
         <div class="ico">📊</div>
-        <p style="margin-bottom:16px">Cargando grupos desde Firebase...</p>
+        <p style="margin-bottom:8px">Cargando grupos desde Firebase...</p>
+        <p style="font-size:.75rem;color:#aaa;margin-bottom:16px">Si los grupos no aparecen en unos segundos, pulsa el botón</p>
         <button class="btn btn-primary" onclick="forceLoadGroups()" style="margin:0 auto">🔄 Cargar grupos</button>
       </div>
     </div>
@@ -752,6 +762,10 @@ function goStep(n){
     if(i+1<n) b.classList.add('done');
   });
   document.getElementById('step'+n+'btn').classList.add('active');
+  // If going to grupos panel and we have data, render it
+  if(n===4 && Object.keys(grupos).length) {
+    renderResults();
+  }
 }
 
 function loadDemo(){
@@ -1096,15 +1110,6 @@ function renderResults(){
     <button class="btn btn-success btn-sm" onclick="toggleEdit()">✅ Terminar edición</button>
   </div>
   <div id="exportArea" style="display:none;margin-bottom:14px"><pre class="export-text" id="exportText"></pre></div>
-
-  <!-- BUSCADOR -->
-  <div style="position:relative;margin-bottom:14px">
-    <input type="text" id="kidSearchInput" placeholder="🔍 Buscar niño por nombre o apellido..." 
-      oninput="searchKidInGroups(this.value)"
-      style="width:100%;padding:11px 16px;border:1.5px solid var(--border);border-radius:10px;font-family:'Instrument Sans',sans-serif;font-size:.88rem;outline:none;transition:border-color .2s"
-      onfocus="this.style.borderColor='var(--sky)'" onblur="this.style.borderColor='var(--border)'">
-    <div id="kidSearchResults" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.1);z-index:100;max-height:280px;overflow-y:auto"></div>
-  </div>
 
   <div class="turno-tabs" id="turnoTabs">${turnoNames.map((t,i)=>{
     const nKids = grupos[t].reduce((a,g)=>a+g.length,0);
@@ -1702,7 +1707,7 @@ window._fbStatus = 'local';
 
 function _initFirebase() {
   try {
-    if (typeof firebase === 'undefined') { console.warn('Firebase SDK not ready'); return; }
+    if (typeof firebase === 'undefined') { setTimeout(_tryInitFirebase, 500); return; }
     if (!firebase.apps.length) firebase.initializeApp({
       apiKey: "AIzaSyCU5L64NN2eEVdpEI6FnPGhbyRLHAN68yk",
       authDomain: "campus-apolana-eafec.firebaseapp.com",
@@ -1714,34 +1719,30 @@ function _initFirebase() {
     window._fbDB = firebase.firestore();
     window._fbStatus = 'connected';
 
-    // Show connected banner
+    // Update banner
     var b = document.getElementById('fbBanner');
     if (b) { b.textContent = '🔥 Firebase conectado — datos en tiempo real.'; b.style.cssText = 'display:block;background:#EDFBF3;color:#1A7A40;border:1px solid #A8E6C0;border-radius:8px;padding:9px 14px;font-size:.78rem;margin-bottom:14px'; }
 
-    // Load grupos from Firebase (may update what's already shown from localStorage)
+    // Load grupos from Firebase
     window._fbDB.collection('campus').doc('grupos').get().then(function(snap) {
       if (snap.exists) {
         try {
           var d = JSON.parse(snap.data().data);
           if (d && Object.keys(d).length > 0) {
-            var alreadyShowing = Object.keys(grupos).length > 0;
             grupos = d;
             window._gruposFromFirebase = d;
             try { localStorage.setItem('campusGrupos3', JSON.stringify(grupos)); } catch(e) {}
-            if (alreadyShowing) {
-              renderResults();
-              showToast('🔄 Grupos actualizados desde Firebase', 'info', 2000);
-            } else {
-              _showGrupos();
-            }
+            // Always render — works for both first load (mobile) and refresh (desktop)
+            _showGrupos();
           }
-        } catch(e) { console.error('Error parsing grupos from Firebase:', e); }
+        } catch(e) { console.error('Error parsing grupos:', e); }
       } else {
-        if (Object.keys(grupos).length > 0) {
-          showToast('💾 Grupos cargados desde caché local', 'info', 2000);
-        }
+        if (Object.keys(grupos).length > 0) _showGrupos();
       }
-    }).catch(function(e) { console.error('Firebase read error:', e); });
+    }).catch(function(e) {
+      console.error('Firebase read error:', e);
+      if (Object.keys(grupos).length > 0) _showGrupos();
+    });
 
     // Load monitores from Firebase
     window._fbDB.collection('campus').doc('monitores').get().then(function(snap) {
@@ -1756,33 +1757,60 @@ function _initFirebase() {
           }
         } catch(e) { console.error('Error parsing monitores:', e); }
       }
-    }).catch(function(e) { console.warn('Monitores Firebase error:', e); });
+    }).catch(function(e) { console.warn('Monitores load error:', e); });
 
   } catch(e) {
-    console.warn('Firebase init error:', e.message);
+    console.warn('Firebase init error:', e);
+    window._fbStatus = 'error';
+    var b = document.getElementById('fbBanner');
+    if (b) { b.textContent = '⚠️ Sin conexión Firebase — trabajando en modo local'; b.style.cssText = 'display:block;background:#FFF8E6;color:#856404;border:1px solid #FFE69C;border-radius:8px;padding:9px 14px;font-size:.78rem;margin-bottom:14px'; }
+    // Still show localStorage data
+    if (Object.keys(grupos).length > 0) _showGrupos();
+    // Retry after 3 seconds
+    setTimeout(_tryInitFirebase, 3000);
   }
 }
 
 function _showGrupos() {
   if (!Object.keys(grupos).length) return;
+  // Ensure view-admin is active
+  document.querySelectorAll('.view').forEach(function(v){ v.classList.remove('active'); });
+  var va = document.getElementById('view-admin');
+  if(va) va.classList.add('active');
+  // Ensure panel4 is active
+  document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('active'); });
   var p4 = document.getElementById('panel4');
-  var ra = document.getElementById('resultsArea');
-  if (!p4 || !ra) return;
-  document.querySelectorAll('#view-admin .panel').forEach(function(p){ p.classList.remove('active'); });
+  if(!p4) { setTimeout(_showGrupos, 300); return; } // DOM not ready yet, retry
   p4.classList.add('active');
+  // Update step buttons
   document.querySelectorAll('.step-btn').forEach(function(b,i){ b.classList.remove('active','done'); if(i<3) b.classList.add('done'); });
   var s4 = document.getElementById('step4btn');
-  if (s4) s4.classList.add('active');
+  if(s4) s4.classList.add('active');
+  // Update header tab
+  document.querySelectorAll('.htab').forEach(function(b){ b.classList.remove('active'); });
+  var adminTab = document.querySelector('.htab');
+  if(adminTab) adminTab.classList.add('active');
+  // Render
   renderResults();
   var t = Object.values(grupos).reduce(function(a,gs){ return a+gs.reduce(function(b,gr){ return b+gr.length; },0); },0);
   showToast('✅ ' + t + ' niños cargados', 'success', 2000);
 }
 
 // Init Firebase after scripts load
+// Init Firebase — robust version for mobile
+function _tryInitFirebase() {
+  if (typeof firebase === 'undefined' || !firebase.firestore) {
+    // Firebase SDK not loaded yet — retry
+    setTimeout(_tryInitFirebase, 300);
+    return;
+  }
+  _initFirebase();
+}
+
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', _initFirebase);
+  document.addEventListener('DOMContentLoaded', function() { setTimeout(_tryInitFirebase, 200); });
 } else {
-  setTimeout(_initFirebase, 100);
+  setTimeout(_tryInitFirebase, 200);
 }
 
 window._saveGruposFirebase = function(g) { if(!window._fbDB) return; try{window._fbDB.collection('campus').doc('grupos').set({data:JSON.stringify(g),updated:new Date()});}catch(e){} };
@@ -2349,38 +2377,59 @@ function crossReference(groups, allKidsData) {
 }
 
 function confirmGruposImport() {
-  const semana = document.getElementById('gruposImportSemanaSelect').value ||
-                 CAMPUS_WEEKS[_currentSemanTab].label;
+  let semana = '';
+  try { semana = document.getElementById('gruposImportSemanaSelect').value; } catch(e) {}
+  if(!semana) {
+    try { semana = CAMPUS_WEEKS[_currentSemanTab||0].label; } catch(e) {}
+  }
   if(!semana) { alert('Selecciona la semana primero.'); return; }
-  if(!_gruposExcelParsed) { alert('Primero sube el Excel.'); return; }
+  if(!_gruposExcelParsed) { alert('Primero sube el Excel de grupos.'); return; }
+  console.log('Importando:', semana, 'grupos:', Object.keys(_gruposExcelParsed));
 
   // Merge into grupos object preserving existing
   if(!grupos[semana]) grupos[semana] = [];
 
-  // Map group names to indices: ROJO 1 → gi=0, VERDE 1 → gi=1, AZUL 1 → gi=2, AMARILLO 1 → gi=3...
-  const COLOR_ORDER = ['ROJO','VERDE','AZUL','AMARILLO'];
-  const existingNames = grupos[semana].map((_,gi)=>getGroupName(gi));
+  // Build ordered list of group names from Excel (preserving original order)
+  // Map each group name to a gi index based on app's COLOR_ORDER
+  const EXCEL_COLOR_ORDER = ['ROJO','AZUL','VERDE','AMARILLO']; // order in Excel columns
+
+  // Collect all group names from parsed data, sorted by color then number
+  const allGroupNames = Object.keys(_gruposExcelParsed).map(n => {
+    const norm = n.trim().replace(/\s+/g,' ');
+    const m = norm.match(/^(ROJO|AZUL|VERDE|AMARILLO)\s+(\d+)$/i);
+    if(!m) return null;
+    const colorIdx = EXCEL_COLOR_ORDER.indexOf(m[1].toUpperCase());
+    const num = parseInt(m[2]);
+    return {name: norm, colorIdx, num, sortKey: num*10 + colorIdx};
+  }).filter(Boolean).sort((a,b) => a.sortKey - b.sortKey);
+
+  // Map name → gi using app's GROUP_COLORS order [Rojo, Verde, Azul, Amarillo]
+  const APP_COLOR_ORDER = GROUP_COLORS.map(c=>c.name.toUpperCase()); // ['ROJO','VERDE','AZUL','AMARILLO']
+  const nameToGi = {};
+  allGroupNames.forEach(({name, num}) => {
+    const m = name.match(/^(ROJO|AZUL|VERDE|AMARILLO)\s+(\d+)$/i);
+    if(!m) return;
+    const appColorIdx = APP_COLOR_ORDER.indexOf(m[1].toUpperCase());
+    if(appColorIdx < 0) return;
+    const gi = (num-1) * GROUP_COLORS.length + appColorIdx;
+    nameToGi[name.toUpperCase()] = gi;
+  });
 
   for(const [gname, kids] of Object.entries(_gruposExcelParsed)) {
-    // Find matching existing group or create new
-    const existIdx = existingNames.indexOf(gname);
-    // Determine target index by color/number
-    const match = gname.match(/^(ROJO|VERDE|AZUL|AMARILLO)\s+(\d+)$/i);
-    if(match) {
-      const colorIdx = COLOR_ORDER.indexOf(match[1].toUpperCase());
-      const num = parseInt(match[2]) - 1;
-      const gi = num * GROUP_COLORS.length + colorIdx;
-      // Extend grupos[semana] if needed
-      while(grupos[semana].length <= gi) grupos[semana].push([]);
-      // Add only kids not already there
-      const existingKidNames = new Set(grupos[semana][gi].map(k=>fullName(k).toLowerCase()));
-      kids.forEach(kid => {
-        const fn = (kid.nombre+' '+kid.apellidos).trim().toLowerCase();
-        if(!existingKidNames.has(fn)) {
-          grupos[semana][gi].push({...kid, id: String(Date.now())+String(Math.floor(Math.random()*100000)), semanas:[], edad: null});
-        }
-      });
-    }
+    const gnameNorm = gname.trim().replace(/\s+/g,' ').toUpperCase();
+    const gi = nameToGi[gnameNorm];
+    if(gi === undefined) { console.warn('No gi for group:', gname); continue; }
+    // Extend grupos[semana] if needed
+    while(grupos[semana].length <= gi) grupos[semana].push([]);
+    // Add only kids not already there
+    const existingKidNames = new Set(grupos[semana][gi].map(k=>fullName(k).toLowerCase()));
+    const ts = Date.now();
+    kids.forEach((kid,i) => {
+      const fn = (kid.nombre+' '+kid.apellidos).trim().toLowerCase();
+      if(!existingKidNames.has(fn)) {
+        grupos[semana][gi].push({...kid, id: String(ts)+String(i)+String(gi), semanas:[], edad: null});
+      }
+    });
   }
 
   // Remove empty groups
@@ -2431,10 +2480,39 @@ function openObsModal(encodedName, turnoEsc) {
         <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
           ${kid.anoNac?`<span style="font-size:.75rem;background:#EEF4FF;color:#0052CC;border:1px solid #C7D9FF;border-radius:5px;padding:2px 8px">n.${kid.anoNac}</span>`:''}
           <span style="font-size:.75rem;background:#F3EFF8;color:#6B3FA0;border:1px solid #D8C8F0;border-radius:5px;padding:2px 8px">📅 ${semanasStr} (${semanasKid.length} semana${semanasKid.length!==1?'s':''})</span>
-          ${kid.comedor?'<span style="font-size:.75rem;background:#EDFBF3;color:#1A7A40;border:1px solid #A8E6C0;border-radius:5px;padding:2px 8px">🍽️ Comedor</span>':''}
-          ${kid.matinera?'<span style="font-size:.75rem;background:#FFF8E6;color:#856404;border:1px solid #FFE69C;border-radius:5px;padding:2px 8px">🌅 Matinera</span>':''}
         </div>
         ${kid.amigos?`<div style="font-size:.78rem;color:#888;background:#F8F9FA;border-radius:6px;padding:8px 10px;margin-bottom:12px">👫 Amigos pedidos: ${kid.amigos}</div>`:''}
+        <div style="display:flex;gap:10px;margin-bottom:12px">
+          <div class="field" style="flex:1">
+            <label>Comedor 🍽️</label>
+            <select id="obsComedor" style="margin-top:4px">
+              <option value="no" ${!kid.comedor?'selected':''}>No</option>
+              <option value="si" ${kid.comedor?'selected':''}>Sí</option>
+            </select>
+          </div>
+          <div class="field" style="flex:1">
+            <label>Matinera 🌅</label>
+            <select id="obsMatinera" style="margin-top:4px">
+              <option value="no" ${!kid.matinera?'selected':''}>No</option>
+              <option value="si" ${kid.matinera?'selected':''}>Sí</option>
+            </select>
+          </div>
+        </div>        <div style="display:flex;gap:10px;margin-bottom:12px">
+          <div class="field" style="flex:1">
+            <label>Comedor 🍽️</label>
+            <select id="obsComedor" style="margin-top:4px">
+              <option value="no">No</option>
+              <option value="si">Sí</option>
+            </select>
+          </div>
+          <div class="field" style="flex:1">
+            <label>Matinera 🌅</label>
+            <select id="obsMatinera" style="margin-top:4px">
+              <option value="no">No</option>
+              <option value="si">Sí</option>
+            </select>
+          </div>
+        </div>
         <div class="field" style="margin-bottom:12px">
           <label>Alergias / necesidades dietéticas</label>
           <input type="text" id="obsAlergia" value="${(kid.alergias||'').replace(/"/g,'&quot;')}" placeholder="ej: alérgico a los frutos secos" style="margin-top:4px">
@@ -2466,6 +2544,8 @@ function saveObs(encodedName, turnoEsc) {
         k.alergias = document.getElementById('obsAlergia').value.trim();
         k.otros = document.getElementById('obsOtros').value.trim();
         k.obs = document.getElementById('obsNota').value.trim();
+        k.comedor = document.getElementById('obsComedor').value === 'si';
+        k.matinera = document.getElementById('obsMatinera').value === 'si';
         found = true;
       }
     }));
