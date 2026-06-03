@@ -45,12 +45,12 @@ function _initPadresFirebase() {
   }
   try {
     if (!firebase.apps.length) firebase.initializeApp({
-      apiKey: "AIzaSyCU5L64NN2eEVdpEI6FnPGhbyRLHAN68yk",
-      authDomain: "campus-apolana-eafec.firebaseapp.com",
-      projectId: "campus-apolana-eafec",
-      storageBucket: "campus-apolana-eafec.firebasestorage.app",
-      messagingSenderId: "1092710557639",
-      appId: "1:1092710557639:web:40f8d51ad374eef9b79be2"
+      apiKey: "AIzaSyB_DjjZVcDHVyFIMM1QzI0l-pXIzT8oOc8",
+      authDomain: "campus-apolana.firebaseapp.com",
+      projectId: "campus-apolana",
+      storageBucket: "campus-apolana.firebasestorage.app",
+      messagingSenderId: "858270175127",
+      appId: "1:858270175127:web:2b83f8408dd8128512fed2"
     });
     var db = firebase.firestore();
     db.collection('campus').doc('grupos').get().then(function(snap) {
