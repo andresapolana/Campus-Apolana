@@ -29,7 +29,11 @@ if(window._grupos && Object.keys(window._grupos).length) {
   document.addEventListener('DOMContentLoaded', _showMonitorPin);
 }
 
-setTimeout(function() {
+function _initMonitorFirebase() {
+  if(typeof firebase === 'undefined' || !firebase.firestore) {
+    setTimeout(_initMonitorFirebase, 400);
+    return;
+  }
   try {
     if(!firebase.apps.length) firebase.initializeApp({
       apiKey: "AIzaSyCU5L64NN2eEVdpEI6FnPGhbyRLHAN68yk",
@@ -72,8 +76,10 @@ setTimeout(function() {
     var cs = document.getElementById('connStatus');
     if(cs) { cs.textContent='🔴 Sin conexión'; cs.style.color='#FF4D4D'; }
     _showMonitorPin();
+    setTimeout(_initMonitorFirebase, 3000);
   }
-}, 400);
+}
+setTimeout(_initMonitorFirebase, 300);
 </script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
