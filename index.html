@@ -3577,8 +3577,8 @@ function showGlobalAttendance() {
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
   modal.innerHTML = '<div style="background:#fff;border-radius:16px;padding:28px;max-width:720px;width:100%;max-height:85vh;overflow-y:auto">' +
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">' +
-    '<div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.2rem">📊 Asistencia global hoy</div>' +
-    '<button onclick="this.closest('div[style*=fixed]').remove()" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:#aaa">✕</button>' +
+    '<div style="font-weight:800;font-size:1.2rem">📊 Asistencia global hoy</div>' +
+    '<button onclick="this.closest(\'[style*=fixed]\').remove()" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:#aaa">✕</button>' +
     '</div>' +
     '<div id="globalAttList">Cargando...</div>' +
     '</div>';
