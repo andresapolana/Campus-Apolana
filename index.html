@@ -1448,7 +1448,30 @@ function enterPin(){
   const pin=document.getElementById('pinInput').value.trim().toUpperCase();
   if(!Object.keys(grupos).length) loadFromStorage();
   let found=null;
-  Object.keys(grupos).forEach(t=>{grupos[t].forEach((g,gi)=>{if(makeCode(t,gi)===pin) found={turno:t,groupIdx:gi,kids:g,code:pin};});});
+
+  // 1. Buscar por código de monitor (nombre asignado)
+  var monRaw = window._monitores && window._asignaciones ? {monitores:window._monitores, asignaciones:window._asignaciones} : null;
+  if(!monRaw) { try { const m=localStorage.getItem('campusMonitores'); if(m) monRaw=JSON.parse(m); } catch(e){} }
+  if(monRaw && monRaw.monitores) {
+    const mon = monRaw.monitores.find(function(m){ return m.codigo===pin; });
+    if(mon) {
+      const asig = monRaw.asignaciones||{};
+      Object.keys(asig).forEach(function(semana){
+        Object.entries(asig[semana]).forEach(function(entry){
+          const gi=entry[0], codigo=entry[1];
+          if(codigo===pin && grupos[semana] && grupos[semana][parseInt(gi)]){
+            found={turno:semana,groupIdx:parseInt(gi),kids:grupos[semana][parseInt(gi)],code:pin,monitorNombre:mon.nombre};
+          }
+        });
+      });
+    }
+  }
+
+  // 2. Fallback: código de grupo automático (S1RO1, etc)
+  if(!found) {
+    Object.keys(grupos).forEach(t=>{grupos[t].forEach((g,gi)=>{if(makeCode(t,gi)===pin) found={turno:t,groupIdx:gi,kids:g,code:pin};});});
+  }
+
   if(!found){document.getElementById('pinError').style.display='block';return;}
   monitorGroup=found;
   currentDateOffset=getCurrentDayIdx();
@@ -1864,7 +1887,7 @@ function _showGrupos() {
   renderResults();
   var t = Object.values(grupos).reduce(function(a,gs){ return a+gs.reduce(function(b,gr){ return b+gr.length; },0); },0);
   showToast('✅ ' + t + ' niños cargados', 'success', 2000);
-    logChange('generate', 'Grupos cargados desde Firebase — ' + t + ' niños en ' + Object.keys(d).length + ' semanas');
+    logChange('generate', 'Grupos cargados desde Firebase — ' + t + ' niños en ' + Object.keys(grupos).length + ' semanas');
 }
 
 // Init Firebase after scripts load
