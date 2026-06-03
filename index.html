@@ -236,7 +236,7 @@ pre.export-text{background:#F6F8FA;border-radius:var(--radius-sm);padding:14px;f
     <button class="htab" onclick="showView('monitores')">👥 Monitores</button>
 
   </div>
-  <div class="header-badge badge-admin" id="modeBadge">ADMIN</div>
+  <div class="header-badge badge-admin" id="modeBadge" onclick="showChangePassword()" title="Cambiar contraseña" style="cursor:pointer">ADMIN 🔒</div>
 </header>
 
 <!-- ══════════ VISTA ADMIN ══════════ -->
@@ -1103,6 +1103,7 @@ function renderResults(){
     <button class="btn btn-outline" onclick="exportCSV()">⬇️ Descargar TSV</button>
     <button class="btn btn-outline" onclick="exportCodes()">🔑 Ver códigos</button>
     <button class="btn btn-outline" onclick="showAttendanceHistory()">📅 Ver asistencia</button>
+    <button class="btn btn-outline btn-sm" onclick="backupGrupos('backup-campus')" title="Descargar backup de todos los grupos">💾 Backup</button>
     <button class="btn btn-danger btn-sm" onclick="resetGroups()" style="margin-left:auto" title="Reiniciar todos los grupos">🗑️ Reiniciar</button>
   </div>
   <div id="editToolbar" class="edit-toolbar" style="display:none">
@@ -1807,21 +1808,23 @@ function _showGrupos() {
 }
 
 // Init Firebase after scripts load
-// Init Firebase — robust version for mobile
+// Firebase init — bulletproof for mobile
+var _fbInitAttempts = 0;
 function _tryInitFirebase() {
-  if (typeof firebase === 'undefined' || !firebase.firestore) {
-    // Firebase SDK not loaded yet — retry
-    setTimeout(_tryInitFirebase, 300);
+  _fbInitAttempts++;
+  if(_fbInitAttempts > 30) { console.warn('Firebase SDK never loaded'); return; }
+  if (typeof firebase === 'undefined' || typeof firebase.firestore !== 'function') {
+    setTimeout(_tryInitFirebase, 500);
     return;
   }
   _initFirebase();
 }
-
+// Multiple triggers to ensure it runs on all devices
+setTimeout(_tryInitFirebase, 100);
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', function() { setTimeout(_tryInitFirebase, 200); });
-} else {
-  setTimeout(_tryInitFirebase, 200);
 }
+window.addEventListener('load', function() { if(!window._fbDB) setTimeout(_tryInitFirebase, 300); });
 
 window._saveGruposFirebase = function(g) { if(!window._fbDB) return; try{window._fbDB.collection('campus').doc('grupos').set({data:JSON.stringify(g),updated:new Date()});}catch(e){} };
 window._saveAttendFirebase = function(key,data) { if(!window._fbDB) return; try{window._fbDB.collection('attendance').doc(key).set({data:JSON.stringify(data),updated:new Date()});}catch(e){} };
@@ -1966,17 +1969,37 @@ function checkSavedGroups(){
 
 function resetGroups(){
   const total = Object.values(grupos).reduce((a,gs)=>a+gs.reduce((b,gr)=>b+gr.length,0),0);
-  if(!confirm(`⚠️ REINICIAR GRUPOS\n\nEsto borrará TODOS los grupos guardados (${total} niños en ${Object.keys(grupos).length} semanas).\n\nEsta acción no se puede deshacer.\n\n¿Estás seguro?`)) return;
-  grupos = {};
-  allKids = [];
-  try{ localStorage.removeItem('campusGrupos3'); }catch(e){}
-  if(window._fbDB){
-    window._fbDB.collection('campus').doc('grupos').delete().catch(e=>console.error(e));
-  }
-  const area=document.getElementById('resultsArea');
-  if(area) area.innerHTML='<div class="no-data"><div class="ico">📊</div><p>Sin datos. Importa un Excel de grupos para empezar.</p></div>';
-  goStep(1);
-  showToast('🗑️ Grupos reiniciados','warn',3000);
+  if(!confirm(`⚠️ REINICIAR GRUPOS\n\nEsto borrará TODOS los grupos (${total} niños en ${Object.keys(grupos).length} semanas).\n\nSe descargará un backup automático antes de borrar.\n\n¿Estás seguro?`)) return;
+  // Auto-backup before reset
+  backupGrupos('backup-antes-de-reiniciar');
+  setTimeout(function(){
+    grupos = {};
+    allKids = [];
+    try{ localStorage.removeItem('campusGrupos3'); }catch(e){}
+    if(window._fbDB){
+      window._fbDB.collection('campus').doc('grupos').set({data:'{}',updated:new Date()}).catch(e=>console.error(e));
+    }
+    const area=document.getElementById('resultsArea');
+    if(area) area.innerHTML='<div class="no-data"><div class="ico">📊</div><p style="margin-bottom:16px">Sin datos. Importa un Excel de grupos para empezar.</p><button class="btn btn-primary" onclick="forceLoadGroups()" style="margin:0 auto">🔄 Cargar grupos</button><p style="font-size:.72rem;color:#aaa;margin-top:12px" id="loadingStatus">Conectando con Firebase...</p></div>';
+    goStep(1);
+    showToast('🗑️ Grupos reiniciados (backup descargado)','warn',3000);
+  }, 500);
+}
+
+function backupGrupos(filename) {
+  const data = {
+    grupos,
+    exportedAt: new Date().toISOString(),
+    totalKids: Object.values(grupos).reduce((a,gs)=>a+gs.reduce((b,g)=>b+g.length,0),0)
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (filename||'campus-backup') + '-' + new Date().toISOString().split('T')[0] + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('💾 Backup descargado','success',2000);
 }
 
 // ══════════════════════════════════════════════
@@ -2960,7 +2983,28 @@ function printComedor() {
     html += '</table>';
   });
 
-  html += '</body></html>';
+  html += '<!-- ══════════ LOGIN SCREEN ══════════ -->
+<div id="loginScreen" style="position:fixed;inset:0;background:var(--dark);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:18px;padding:36px 32px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.4);text-align:center">
+    <img id="loginLogo" style="width:64px;height:64px;border-radius:50%;object-fit:cover;margin-bottom:16px">
+    <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.4rem;margin-bottom:4px;color:var(--dark)">Campus Apolana</div>
+    <div style="font-size:.83rem;color:#888;margin-bottom:24px">Panel de administración</div>
+    <div style="text-align:left;margin-bottom:12px">
+      <label style="font-size:.75rem;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:.5px">Contraseña</label>
+      <input type="password" id="loginPassword" placeholder="Contraseña de acceso"
+        style="width:100%;margin-top:6px;padding:12px 14px;border:1.5px solid #E0E6ED;border-radius:10px;font-family:'Instrument Sans',sans-serif;font-size:.95rem;outline:none;box-sizing:border-box;transition:border-color .2s"
+        onfocus="this.style.borderColor='#0066FF'" onblur="this.style.borderColor='#E0E6ED'"
+        onkeydown="if(event.key==='Enter')checkLogin()">
+      <div id="loginError" style="display:none;color:#E74C3C;font-size:.78rem;margin-top:6px">Contraseña incorrecta.</div>
+    </div>
+    <button onclick="checkLogin()" style="width:100%;padding:13px;background:var(--dark);color:#FFB800;border:none;border-radius:10px;font-family:'Syne',sans-serif;font-weight:700;font-size:.95rem;cursor:pointer;transition:opacity .2s" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+      Entrar →
+    </button>
+    <div style="margin-top:16px;font-size:.72rem;color:#ccc">Campus Apolana · Ítaka DYR</div>
+  </div>
+</div>
+
+</body></html>';
   const win = window.open('','_blank');
   win.document.write(html);
   win.document.close();
@@ -3336,6 +3380,115 @@ function findGroupIdxByName(groupName, semana) {
   }
   return -1;
 }
+
+// ══════════════════════════════════════════════
+// AUTENTICACIÓN ADMIN
+// ══════════════════════════════════════════════
+const SESSION_KEY = 'campus_session';
+const SESSION_HOURS = 8; // session expires after 8 hours
+
+function checkLogin() {
+  const pwd = document.getElementById('loginPassword').value.trim();
+  if(!pwd) return;
+
+  // Check session first
+  if(isSessionValid()) { hideLogin(); return; }
+
+  // Verify against Firebase
+  if(window._fbDB) {
+    window._fbDB.collection('campus').doc('config').get().then(function(snap) {
+      var adminPwd = 'CAMPUS2025'; // fallback default
+      if(snap.exists && snap.data().adminPassword) {
+        adminPwd = snap.data().adminPassword;
+      }
+      if(pwd === adminPwd) {
+        // Save session
+        try {
+          localStorage.setItem(SESSION_KEY, JSON.stringify({
+            ts: Date.now(),
+            hours: SESSION_HOURS
+          }));
+        } catch(e) {}
+        hideLogin();
+      } else {
+        document.getElementById('loginError').style.display='block';
+        document.getElementById('loginPassword').value='';
+        document.getElementById('loginPassword').focus();
+      }
+    }).catch(function() {
+      // Firebase unavailable — use default password
+      if(pwd === 'CAMPUS2025') {
+        localStorage.setItem(SESSION_KEY, JSON.stringify({ts: Date.now(), hours: SESSION_HOURS}));
+        hideLogin();
+      } else {
+        document.getElementById('loginError').style.display='block';
+      }
+    });
+  } else {
+    // No Firebase yet — try default
+    if(pwd === 'CAMPUS2025') {
+      try { localStorage.setItem(SESSION_KEY, JSON.stringify({ts: Date.now(), hours: SESSION_HOURS})); } catch(e) {}
+      hideLogin();
+    } else {
+      document.getElementById('loginError').style.display='block';
+    }
+  }
+}
+
+function isSessionValid() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SESSION_KEY)||'{}');
+    if(!s.ts) return false;
+    const elapsed = (Date.now() - s.ts) / 3600000; // hours
+    return elapsed < (s.hours || SESSION_HOURS);
+  } catch(e) { return false; }
+}
+
+function hideLogin() {
+  const el = document.getElementById('loginScreen');
+  if(el) {
+    el.style.opacity='0';
+    el.style.transition='opacity .3s';
+    setTimeout(function(){ el.style.display='none'; },300);
+  }
+  // Also set logo in login screen
+  const logo = document.getElementById('loginLogo');
+  const headerLogo = document.querySelector('.app-logo img');
+  if(logo && headerLogo) logo.src = headerLogo.src;
+}
+
+function showChangePassword() {
+  const newPwd = prompt('Nueva contraseña de administrador (mínimo 6 caracteres):');
+  if(!newPwd || newPwd.length < 6) { alert('Contraseña demasiado corta.'); return; }
+  const confirm = prompt('Repite la nueva contraseña:');
+  if(newPwd !== confirm) { alert('Las contraseñas no coinciden.'); return; }
+  if(window._fbDB) {
+    window._fbDB.collection('campus').doc('config').set({adminPassword: newPwd}, {merge:true}).then(function(){
+      showToast('✅ Contraseña actualizada correctamente','success');
+    }).catch(function(e){
+      showToast('❌ Error al guardar: '+e.message,'error');
+    });
+  }
+}
+
+// Check session on load
+document.addEventListener('DOMContentLoaded', function() {
+  // Set logo
+  const logo = document.getElementById('loginLogo');
+  const headerLogo = document.querySelector('.app-logo img');
+  if(logo && headerLogo) logo.src = headerLogo.src;
+
+  if(isSessionValid()) {
+    hideLogin();
+  } else {
+    // Show login, focus password field
+    setTimeout(function(){
+      const pwd = document.getElementById('loginPassword');
+      if(pwd) pwd.focus();
+    }, 300);
+  }
+});
+
 </script>
 </body>
 </html>
