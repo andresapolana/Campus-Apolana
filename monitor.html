@@ -288,13 +288,31 @@ function makeCode(semana,gi){
 
 function enterPin(){
   const pin=document.getElementById('pinInput').value.trim().toUpperCase();
+  if(!pin) return;
+
+  // Si Firebase está cargando y no tenemos datos de monitores todavía, esperar y reintentar
+  if(window._fbStatus==='connecting' && !window._monitoresData && !localStorage.getItem('campusMonitores')) {
+    var btn = document.querySelector('.btn-enter');
+    if(btn) { btn.textContent='⏳ Conectando...'; btn.disabled=true; }
+    setTimeout(function(){
+      if(btn) { btn.textContent='Entrar →'; btn.disabled=false; }
+      enterPin();
+    }, 1500);
+    return;
+  }
+
   let grupos=window._grupos||{};
   // Also try localStorage
   if(!Object.keys(grupos).length){try{const g=localStorage.getItem('campusGrupos3');if(g)grupos=JSON.parse(g);}catch(e){}}
+
+  // Also try monitoresData from localStorage if not in memory
+  let monDataRaw = window._monitoresData;
+  if(!monDataRaw) { try { const m=localStorage.getItem('campusMonitores'); if(m) monDataRaw=JSON.parse(m); } catch(e){} }
+
   let found=null;
 
   // Check named monitor codes first
-  const monData=window._monitoresData;
+  const monData=monDataRaw;
   if(monData){
     const mon=monData.monitores.find(m=>m.codigo===pin);
     if(mon){

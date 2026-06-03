@@ -6,6 +6,7 @@
 <title>Campus Verano — Manager Pro</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Instrument+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script defer src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js" onerror="console.error('Firebase app script failed to load')"></script>
 <script defer src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js" onerror="console.error('Firebase firestore script failed to load')"></script>
 <style>
@@ -222,6 +223,56 @@ pre.export-text{background:#F6F8FA;border-radius:var(--radius-sm);padding:14px;f
   .app-logo span{display:none}
   .comedor-table{font-size:.75rem}
   .comedor-table th,.comedor-table td{padding:8px 10px}
+
+  /* MOBILE NAV */
+  .app-header{height:52px;padding:0 12px}
+  .header-tabs{gap:0;overflow-x:auto;scrollbar-width:none}
+  .header-tabs::-webkit-scrollbar{display:none}
+  .htab{padding:5px 10px;font-size:.75rem}
+
+  /* MOBILE CONTAINER */
+  .container{padding:14px 12px}
+
+  /* MOBILE STEPS */
+  .steps{gap:4px}
+  .step-btn{padding:6px 10px;font-size:.72rem}
+  .step-num{width:16px;height:16px;font-size:.58rem}
+
+  /* MOBILE STATS */
+  .stats-bar{gap:8px}
+  .stat{min-width:70px;padding:10px 12px}
+  .stat-num{font-size:1.4rem}
+  .stat-label{font-size:.62rem}
+
+  /* MOBILE BUTTONS */
+  .btn{padding:8px 12px;font-size:.78rem}
+  .btn-sm{padding:5px 9px;font-size:.7rem}
+
+  /* MOBILE GRUPOS */
+  .grupo-card{margin-bottom:10px}
+  .grupo-header{padding:10px 12px}
+  .grupo-body{padding:8px 10px}
+
+  /* MOBILE TURNO TABS */
+  .turno-tabs{gap:5px;padding-bottom:6px}
+  .ttab{padding:6px 10px;font-size:.72rem}
+
+  /* MOBILE MONITOR */
+  .monitor-wrap{padding:14px 10px}
+  .attend-item{padding:9px 10px;gap:8px}
+  .attend-name{font-size:.84rem}
+  .attend-avatar{width:30px;height:30px;font-size:.68rem}
+  .save-bar{padding:9px 10px;gap:7px}
+
+  /* MOBILE CARD */
+  .card{padding:16px 14px}
+  .card-title{font-size:.95rem}
+
+  /* SEARCH BAR MOBILE */
+  #kidSearchInput{font-size:.8rem}
+
+  /* LINKS BAR MOBILE */
+  .comedor-wrap{padding:0}
 }
 </style>
 </head>
@@ -234,6 +285,8 @@ pre.export-text{background:#F6F8FA;border-radius:var(--radius-sm);padding:14px;f
     <button class="htab" onclick="showView('monitor')">🏃 Monitor</button>
     <button class="htab" onclick="showView('comedor')">🍽️ Comedor</button>
     <button class="htab" onclick="showView('monitores')">👥 Monitores</button>
+    <button class="htab" onclick="showView('qr')">📲 QR</button>
+    <button class="htab" onclick="showView('changelog')">📋 Cambios</button>
 
   </div>
   <div class="header-badge badge-admin" id="modeBadge" onclick="showChangePassword()" title="Cambiar contraseña" style="cursor:pointer">ADMIN 🔒</div>
@@ -744,9 +797,11 @@ function showView(v){
   document.querySelectorAll('.htab').forEach(el=>el.classList.remove('active'));
   document.getElementById('view-'+v).classList.add('active');
   event.currentTarget.classList.add('active');
-  const badges={admin:'ADMIN · badge-admin',monitor:'MONITOR · badge-monitor',comedor:'COMEDOR · badge-comedor',monitores:'MONITORES · badge-admin',ia:'IA · badge-admin'};
+  const badges={admin:'ADMIN · badge-admin',monitor:'MONITOR · badge-monitor',comedor:'COMEDOR · badge-comedor',monitores:'MONITORES · badge-admin',ia:'IA · badge-admin',qr:'QR · badge-admin',changelog:'CAMBIOS · badge-admin'};
   const [txt,cls]=(badges[v]||'ADMIN · badge-admin').split(' · ');
   if(v==='monitores') { loadMonitoresData(); setTimeout(renderMonitoresList,300); }
+  if(v==='qr') { setTimeout(renderQRCodes, 100); }
+  if(v==='changelog') { loadChangelog(); }
   const b=document.getElementById('modeBadge');
   b.textContent=txt; b.className='header-badge '+cls;
 }
@@ -1103,7 +1158,9 @@ function renderResults(){
     <button class="btn btn-outline" onclick="exportCSV()">⬇️ Descargar TSV</button>
     <button class="btn btn-outline" onclick="exportCodes()">🔑 Ver códigos</button>
     <button class="btn btn-outline" onclick="showAttendanceHistory()">📅 Ver asistencia</button>
+    <button class="btn btn-outline" onclick="showGlobalAttendance()">🌐 Asistencia global</button>
     <button class="btn btn-outline btn-sm" onclick="backupGrupos('backup-campus')" title="Descargar backup de todos los grupos">💾 Backup</button>
+    <button class="btn btn-success btn-sm" onclick="saveGruposManual()" id="saveFirebaseBtn" title="Guardar grupos en Firebase ahora">🔥 Guardar en Firebase</button>
     <button class="btn btn-danger btn-sm" onclick="resetGroups()" style="margin-left:auto" title="Reiniciar todos los grupos">🗑️ Reiniciar</button>
   </div>
   <div id="editToolbar" class="edit-toolbar" style="display:none">
@@ -1224,6 +1281,7 @@ function moveKid(kidId,fromTurno,fromGi,toTurno,toGi){
   const kidIdx=grupos[fromT][fromGi].findIndex(k=>String(k.id)===String(kidId));
   if(kidIdx===-1) { console.warn('Kid not found:',kidId); return; }
   const [kid]=grupos[fromT][fromGi].splice(kidIdx,1);
+  var fromName=getGroupName(fromGi); var toName=getGroupName(toGi);
   kid.turno=toT;
   grupos[toT][toGi].push(kid);
   saveToStorage();
@@ -1231,6 +1289,7 @@ function moveKid(kidId,fromTurno,fromGi,toTurno,toGi){
   if(fromT!==toT) refreshGrid(toT);
   setupDragDrop();
   showToast('↔️ Niño movido y guardado ✅','success');
+  logChange('move', (kid.nombre||kid.nombre||'Niño') + ' movido de ' + fromName + ' → ' + toName + ' (' + fromT + ')');
 }
 
 function refreshGrid(turno){
@@ -1805,6 +1864,7 @@ function _showGrupos() {
   renderResults();
   var t = Object.values(grupos).reduce(function(a,gs){ return a+gs.reduce(function(b,gr){ return b+gr.length; },0); },0);
   showToast('✅ ' + t + ' niños cargados', 'success', 2000);
+    logChange('generate', 'Grupos cargados desde Firebase — ' + t + ' niños en ' + Object.keys(d).length + ' semanas');
 }
 
 // Init Firebase after scripts load
@@ -1827,6 +1887,24 @@ if (document.readyState === 'loading') {
 window.addEventListener('load', function() { if(!window._fbDB) setTimeout(_tryInitFirebase, 300); });
 
 window._saveGruposFirebase = function(g) { if(!window._fbDB) return; try{window._fbDB.collection('campus').doc('grupos').set({data:JSON.stringify(g),updated:new Date()});}catch(e){} };
+
+function saveGruposManual() {
+  if(!window._fbDB) { showToast('❌ Firebase no conectado','error'); return; }
+  if(!Object.keys(grupos).length) { showToast('⚠️ No hay grupos para guardar','error'); return; }
+  var btn = document.getElementById('saveFirebaseBtn');
+  if(btn) { btn.disabled=true; btn.textContent='⏳ Guardando...'; }
+  window._fbDB.collection('campus').doc('grupos').set({
+    data: JSON.stringify(grupos),
+    updated: new Date()
+  }).then(function() {
+    showToast('🔥 Grupos guardados en Firebase ✅','success');
+    if(btn) { btn.disabled=false; btn.textContent='🔥 Guardar en Firebase'; }
+    logChange('save', 'Grupos guardados manualmente en Firebase — ' + Object.values(grupos).reduce(function(a,g){return a+g.reduce(function(b,gr){return b+gr.length;},0);},0) + ' niños');
+  }).catch(function(e) {
+    showToast('❌ Error al guardar: ' + e.message,'error');
+    if(btn) { btn.disabled=false; btn.textContent='🔥 Guardar en Firebase'; }
+  });
+}
 window._saveAttendFirebase = function(key,data) { if(!window._fbDB) return; try{window._fbDB.collection('attendance').doc(key).set({data:JSON.stringify(data),updated:new Date()});}catch(e){} };
 window._loadAttendFirebase = async function(key) { if(!window._fbDB) return null; try{var s=await window._fbDB.collection('attendance').doc(key).get(); return s.exists?JSON.parse(s.data().data):null;}catch(e){return null;} };
 window._loadAllAttendFirebase = async function(code) { if(!window._fbDB) return []; try{var s=await window._fbDB.collection('attendance').get();var r=[];s.forEach(function(d){if(d.id.startsWith('att_'+code+'_'))r.push({dateStr:d.id.replace('att_'+code+'_',''),data:JSON.parse(d.data().data||'{}')});});return r;}catch(e){return[];} };
@@ -3360,6 +3438,213 @@ function findGroupIdxByName(groupName, semana) {
   return -1;
 }
 
+
+// ══════════════════════════════════════════════
+// QR CODES
+// ══════════════════════════════════════════════
+var _qrRendered = false;
+function renderQRCodes() {
+  var base = window.location.href.replace(/\/[^\/]*$/, '/');
+  var padresUrl = base + 'padres.html';
+  var monitorUrl = base + 'monitor.html';
+
+  document.getElementById('qrPadresUrl').textContent = padresUrl;
+  document.getElementById('qrMonitoresUrl').textContent = monitorUrl;
+
+  var c1 = document.getElementById('qrPadres');
+  var c2 = document.getElementById('qrMonitores');
+
+  // Clear previous
+  c1.innerHTML = '';
+  c2.innerHTML = '';
+
+  if(typeof QRCode === 'undefined') {
+    c1.innerHTML = '<p style="color:red;font-size:.8rem">Error: librería QR no cargada</p>';
+    return;
+  }
+
+  new QRCode(c1, {text: padresUrl, width: 200, height: 200, colorDark:'#0066FF', colorLight:'#ffffff', correctLevel: QRCode.CorrectLevel.M});
+  new QRCode(c2, {text: monitorUrl, width: 200, height: 200, colorDark:'#00C46A', colorLight:'#ffffff', correctLevel: QRCode.CorrectLevel.M});
+}
+
+function downloadQR(canvasId, filename) {
+  var container = document.getElementById(canvasId);
+  var canvas = container.querySelector('canvas') || container;
+  if(!canvas || canvas.tagName !== 'CANVAS') {
+    // QRCode lib creates an img + canvas; get canvas
+    canvas = container.querySelector('canvas');
+  }
+  if(!canvas) { showToast('No se pudo generar el QR','error'); return; }
+  var link = document.createElement('a');
+  link.download = filename;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+}
+
+// ══════════════════════════════════════════════
+// CHANGELOG - historial de cambios
+// ══════════════════════════════════════════════
+var _changelog = [];
+var CHANGELOG_KEY = 'campusChangelog';
+var MAX_LOG = 200;
+
+function logChange(action, detail) {
+  var entry = {
+    ts: Date.now(),
+    action: action,
+    detail: detail,
+    user: 'Admin'
+  };
+  _changelog.unshift(entry);
+  if(_changelog.length > MAX_LOG) _changelog = _changelog.slice(0, MAX_LOG);
+  try { localStorage.setItem(CHANGELOG_KEY, JSON.stringify(_changelog)); } catch(e) {}
+  // Also save to Firebase
+  if(window._fbDB) {
+    window._fbDB.collection('campus').doc('changelog').set({
+      data: JSON.stringify(_changelog),
+      updated: new Date()
+    }).catch(function(){});
+  }
+}
+
+function loadChangelog() {
+  var el = document.getElementById('changelogList');
+  if(!el) return;
+
+  // Try Firebase first
+  if(window._fbDB) {
+    window._fbDB.collection('campus').doc('changelog').get().then(function(snap) {
+      if(snap.exists && snap.data().data) {
+        try {
+          _changelog = JSON.parse(snap.data().data);
+          try { localStorage.setItem(CHANGELOG_KEY, snap.data().data); } catch(e) {}
+        } catch(e) {}
+      } else {
+        // Fall back to localStorage
+        try { _changelog = JSON.parse(localStorage.getItem(CHANGELOG_KEY)||'[]'); } catch(e) { _changelog = []; }
+      }
+      renderChangelog();
+    }).catch(function() {
+      try { _changelog = JSON.parse(localStorage.getItem(CHANGELOG_KEY)||'[]'); } catch(e) { _changelog = []; }
+      renderChangelog();
+    });
+  } else {
+    try { _changelog = JSON.parse(localStorage.getItem(CHANGELOG_KEY)||'[]'); } catch(e) { _changelog = []; }
+    renderChangelog();
+  }
+}
+
+function renderChangelog() {
+  var el = document.getElementById('changelogList');
+  if(!el) return;
+  if(!_changelog.length) {
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">No hay cambios registrados todavía.</div>';
+    return;
+  }
+  var icons = {move:'↔️', edit:'✏️', add:'➕', remove:'🗑️', save:'💾', generate:'⚙️'};
+  el.innerHTML = _changelog.map(function(e) {
+    var d = new Date(e.ts);
+    var dateStr = d.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit'}) + ' ' + d.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+    var icon = icons[e.action] || '📝';
+    var color = e.action==='remove'?'var(--coral)':e.action==='add'?'var(--grass)':e.action==='move'?'var(--sky)':'var(--muted)';
+    return '<div style="display:flex;gap:12px;align-items:flex-start;background:#fff;border-radius:10px;border:1px solid var(--border);padding:10px 14px;font-size:.82rem">' +
+      '<span style="font-size:1.1rem;flex-shrink:0">' + icon + '</span>' +
+      '<div style="flex:1"><span style="font-weight:600;color:' + color + '">' + e.detail + '</span></div>' +
+      '<span style="font-size:.72rem;color:var(--muted);white-space:nowrap">' + dateStr + '</span>' +
+      '</div>';
+  }).join('');
+}
+
+function clearChangelog() {
+  if(!confirm('¿Borrar todo el historial de cambios?')) return;
+  _changelog = [];
+  try { localStorage.removeItem(CHANGELOG_KEY); } catch(e) {}
+  if(window._fbDB) {
+    window._fbDB.collection('campus').doc('changelog').set({data:'[]',updated:new Date()}).catch(function(){});
+  }
+  renderChangelog();
+}
+
+// Load changelog from localStorage on startup
+try { _changelog = JSON.parse(localStorage.getItem(CHANGELOG_KEY)||'[]'); } catch(e) { _changelog = []; }
+
+// ══════════════════════════════════════════════
+// ASISTENCIA GLOBAL EN TIEMPO REAL
+// ══════════════════════════════════════════════
+function showGlobalAttendance() {
+  if(!window._fbDB) { alert('Necesitas Firebase conectado.'); return; }
+  var modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  modal.innerHTML = '<div style="background:#fff;border-radius:16px;padding:28px;max-width:720px;width:100%;max-height:85vh;overflow-y:auto">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">' +
+    '<div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.2rem">📊 Asistencia global hoy</div>' +
+    '<button onclick="this.closest('div[style*=fixed]').remove()" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:#aaa">✕</button>' +
+    '</div>' +
+    '<div id="globalAttList">Cargando...</div>' +
+    '</div>';
+  document.body.appendChild(modal);
+
+  // Get today's date key
+  var today = new Date();
+  var dateStr = today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+
+  // Fetch all attendance docs for today
+  window._fbDB.collection('attendance').get().then(function(snap) {
+    var results = {};
+    snap.forEach(function(doc) {
+      if(doc.id.endsWith('_'+dateStr)) {
+        var code = doc.id.replace('att_','').replace('_'+dateStr,'');
+        try {
+          var data = JSON.parse(doc.data().data||'{}');
+          var present = Object.values(data).filter(function(v){return v==='P';}).length;
+          var absent = Object.values(data).filter(function(v){return v==='A';}).length;
+          results[code] = {present:present, absent:absent, total:present+absent};
+        } catch(e) {}
+      }
+    });
+
+    var el = document.getElementById('globalAttList');
+    if(!el) return;
+
+    // Match with grupos
+    var allGroups = [];
+    Object.keys(grupos).forEach(function(semana) {
+      grupos[semana].forEach(function(grupo, gi) {
+        var name = getGroupName(gi);
+        var code = makeCode(semana, gi);
+        var att = results[code] || null;
+        allGroups.push({semana:semana, name:name, code:code, size:grupo.length, att:att});
+      });
+    });
+
+    if(!allGroups.length) {
+      el.innerHTML = '<p style="text-align:center;color:var(--muted)">No hay grupos cargados.</p>';
+      return;
+    }
+
+    var hasAtt = allGroups.filter(function(g){return g.att;}).length;
+    var html = '<div style="font-size:.8rem;color:var(--muted);margin-bottom:12px">' + hasAtt + ' de ' + allGroups.length + ' grupos han pasado lista hoy</div>';
+    html += '<div style="display:flex;flex-direction:column;gap:6px">';
+    allGroups.forEach(function(g) {
+      var pct = g.att ? Math.round(g.att.present/Math.max(g.att.total,1)*100) : 0;
+      var statusColor = !g.att ? '#ddd' : pct>=80 ? 'var(--grass)' : pct>=50 ? 'var(--sun)' : 'var(--coral)';
+      var statusText = !g.att ? '⏳ Sin lista' : '✅ Lista pasada';
+      html += '<div style="display:flex;align-items:center;gap:10px;background:#f8f9fa;border-radius:8px;padding:8px 12px">' +
+        '<div style="width:10px;height:10px;border-radius:50%;background:' + statusColor + ';flex-shrink:0"></div>' +
+        '<div style="flex:1;font-size:.82rem"><strong>' + g.name + '</strong> <span style="color:var(--muted);font-size:.75rem">(' + g.semana + ')</span></div>' +
+        (g.att ? '<div style="font-size:.78rem;color:var(--grass)">' + g.att.present + '✅</div><div style="font-size:.78rem;color:var(--coral)">' + g.att.absent + '❌</div>' : '') +
+        '<div style="font-size:.75rem;color:var(--muted)">' + statusText + '</div>' +
+        '</div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+  }).catch(function(e) {
+    var el = document.getElementById('globalAttList');
+    if(el) el.innerHTML = '<p style="color:red">Error: ' + e.message + '</p>';
+  });
+}
+
+
 // ══════════════════════════════════════════════
 // AUTENTICACIÓN ADMIN
 // ══════════════════════════════════════════════
@@ -3489,5 +3774,47 @@ document.addEventListener('DOMContentLoaded', function() {
     <div style="margin-top:16px;font-size:.72rem;color:#ccc">Ítaka DYR · Apolana · Campus 2025</div>
   </div>
 </div>
+
+<!-- ══════════ VISTA QR ══════════ -->
+<div class="view" id="view-qr">
+  <div class="container" style="max-width:700px">
+    <div class="card" style="text-align:center;padding:36px">
+      <div class="card-title">📲 Códigos QR para compartir</div>
+      <div class="card-desc">Descarga o imprime estos QR para pegarlos en el campus</div>
+      <div style="display:flex;gap:24px;justify-content:center;flex-wrap:wrap;margin-top:20px">
+        <div style="flex:1;min-width:200px">
+          <div style="font-family:'Syne',sans-serif;font-weight:700;margin-bottom:12px;color:var(--sky)">👨‍👩‍👧 Portal de Padres</div>
+          <canvas id="qrPadres" style="border-radius:12px;border:3px solid var(--sky);display:block;margin:0 auto"></canvas>
+          <p style="font-size:.72rem;color:var(--muted);margin-top:8px" id="qrPadresUrl"></p>
+          <button class="btn btn-primary btn-sm" style="margin-top:10px" onclick="downloadQR('qrPadres','qr-padres.png')">⬇️ Descargar</button>
+        </div>
+        <div style="flex:1;min-width:200px">
+          <div style="font-family:'Syne',sans-serif;font-weight:700;margin-bottom:12px;color:var(--grass)">🏃 Portal de Monitores</div>
+          <canvas id="qrMonitores" style="border-radius:12px;border:3px solid var(--grass);display:block;margin:0 auto"></canvas>
+          <p style="font-size:.72rem;color:var(--muted);margin-top:8px" id="qrMonitoresUrl"></p>
+          <button class="btn btn-success btn-sm" style="margin-top:10px" onclick="downloadQR('qrMonitores','qr-monitores.png')">⬇️ Descargar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ VISTA CHANGELOG ══════════ -->
+<div class="view" id="view-changelog">
+  <div class="container" style="max-width:760px">
+    <div class="card">
+      <div class="card-title">📋 Historial de cambios</div>
+      <div class="card-desc">Registro de modificaciones en grupos</div>
+      <div id="changelogList" style="display:flex;flex-direction:column;gap:8px;max-height:600px;overflow-y:auto">
+        <div style="text-align:center;padding:40px;color:var(--muted)">Cargando historial...</div>
+      </div>
+      <div style="margin-top:16px;display:flex;gap:10px">
+        <button class="btn btn-outline btn-sm" onclick="loadChangelog()">🔄 Actualizar</button>
+        <button class="btn btn-danger btn-sm" onclick="clearChangelog()">🗑️ Limpiar historial</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
