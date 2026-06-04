@@ -1594,7 +1594,7 @@ async function renderAttendList(){
             var parts = (r.dias[dayName]||'').split('|');
             var act=parts[0]||''; var lugar=parts[1]||'';
             return '<div style="display:flex;gap:8px;align-items:baseline;padding:4px 0;border-bottom:1px solid #eee;font-size:.8rem">' +
-              '<span style="font-family:'DM Mono',monospace;color:#888;font-size:.72rem;flex-shrink:0;min-width:90px">'+r.franja+'</span>' +
+              '<span style="font-family:monospace;color:#888;font-size:.72rem;flex-shrink:0;min-width:90px">'+r.franja+'</span>' +
               '<span style="font-weight:600">'+act+'</span>' +
               (lugar ? '<span style="color:#aaa;font-size:.72rem">· '+lugar+'</span>' : '') +
               '</div>';
