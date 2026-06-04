@@ -3833,7 +3833,7 @@ function showGlobalAttendance() {
   modal.innerHTML = '<div style="background:#fff;border-radius:16px;padding:28px;max-width:720px;width:100%;max-height:85vh;overflow-y:auto">' +
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">' +
     '<div style="font-weight:800;font-size:1.2rem">📊 Asistencia global hoy</div>' +
-    '<button onclick="this.closest('div[style*=\"position:fixed\"]').remove()" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:#aaa">✕</button>' +
+    '<button onclick="(function(el){while(el.parentElement)el=el.parentElement;el.querySelector(\'div[style]\').remove();})(this)" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:#aaa">✕</button>' +
     '</div>' +
     '<div id="globalAttList">Cargando...</div>' +
     '</div>';
@@ -3968,7 +3968,7 @@ function showAccessLog() {
   modal.innerHTML = '<div style="background:#fff;border-radius:16px;padding:28px;max-width:600px;width:100%;max-height:80vh;overflow-y:auto">' +
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">' +
     '<div style="font-weight:800;font-size:1.1rem">🔐 Registro de accesos</div>' +
-    '<button onclick="this.closest('div[style*=\"position:fixed\"]').remove()" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:#aaa">✕</button>' +
+    '<button onclick="(function(el){while(el.parentElement)el=el.parentElement;el.querySelector(\'div[style]\').remove();})(this)" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:#aaa">✕</button>' +
     '</div><div id="accessLogList">Cargando...</div></div>';
   document.body.appendChild(modal);
 
