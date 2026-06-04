@@ -3054,25 +3054,41 @@ function addPlantilla() {
 function renderPlantillasList() {
   var el = document.getElementById('plantillas-list');
   if(!el) return;
+  el.innerHTML = '';
   var ids = Object.keys(_plantillas);
   if(!ids.length) {
     el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted)">No hay plantillas todavía. Crea una con el botón + Nueva plantilla.</div>';
     return;
   }
-  el.innerHTML = '<div style="display:flex;flex-direction:column;gap:8px">' +
-    ids.map(function(id) {
-      var p = _plantillas[id];
-      var nFranjas = (p.franjas||[]).length;
-      return '<div style="display:flex;align-items:center;gap:12px;background:#f8f9fa;border-radius:10px;padding:12px 16px;border:1px solid var(--border)">' +
-        '<div style="flex:1">' +
-          '<div style="font-weight:700;font-size:.9rem">'+p.nombre+'</div>' +
-          '<div style="font-size:.75rem;color:var(--muted)">'+nFranjas+' franjas horarias</div>' +
-        '</div>' +
-        '<button class="btn btn-outline btn-sm" onclick="openPlantillaEditor(\'' + id + '\')">✏️ Editar</button>' +
-        '<button class="btn btn-outline btn-sm" onclick="duplicatePlantilla(\'' + id + '\')">📋 Duplicar</button>' +
-        '<button class="btn btn-danger btn-sm" onclick="deletePlantilla(\'' + id + '\')">🗑️</button>' +
-      '</div>';
-    }).join('') + '</div>';
+  var wrap = document.createElement('div');
+  wrap.style.cssText = 'display:flex;flex-direction:column;gap:8px';
+  ids.forEach(function(id) {
+    var p = _plantillas[id];
+    var nFranjas = (p.franjas||[]).length;
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:12px;background:#f8f9fa;border-radius:10px;padding:12px 16px;border:1px solid var(--border)';
+    var info = document.createElement('div');
+    info.style.flex = '1';
+    info.innerHTML = '<div style="font-weight:700;font-size:.9rem">'+p.nombre+'</div><div style="font-size:.75rem;color:var(--muted)">'+nFranjas+' franjas horarias</div>';
+    row.appendChild(info);
+    var btnEdit = document.createElement('button');
+    btnEdit.className = 'btn btn-outline btn-sm';
+    btnEdit.textContent = '✏️ Editar';
+    btnEdit.addEventListener('click', (function(pid){ return function(){ openPlantillaEditor(pid); }; })(id));
+    row.appendChild(btnEdit);
+    var btnDup = document.createElement('button');
+    btnDup.className = 'btn btn-outline btn-sm';
+    btnDup.textContent = '📋 Duplicar';
+    btnDup.addEventListener('click', (function(pid){ return function(){ duplicatePlantilla(pid); }; })(id));
+    row.appendChild(btnDup);
+    var btnDel = document.createElement('button');
+    btnDel.className = 'btn btn-danger btn-sm';
+    btnDel.textContent = '🗑️';
+    btnDel.addEventListener('click', (function(pid){ return function(){ deletePlantilla(pid); }; })(id));
+    row.appendChild(btnDel);
+    wrap.appendChild(row);
+  });
+  el.appendChild(wrap);
 }
 
 function openPlantillaEditor(id) {
@@ -3096,44 +3112,103 @@ function renderPlantillaEditor() {
   var franjas = p.franjas || [];
   var area = document.getElementById('plantilla-editor-area');
   if(!area) return;
+  area.innerHTML = '';
 
   var dias = ['Lunes','Martes','Miercoles','Jueves','Viernes'];
   var diasLabel = ['Lunes','Martes','Miérc.','Jueves','Viernes'];
 
-  area.innerHTML = '<div style="overflow-x:auto;margin-bottom:14px">' +
-    '<table style="width:100%;border-collapse:collapse;font-size:.82rem;min-width:650px">' +
-    '<thead><tr style="background:var(--dark)">' +
-    '<th style="padding:10px 12px;text-align:left;color:#FFB800;width:130px">Franja</th>' +
-    diasLabel.map(function(d){ return '<th style="padding:10px 8px;color:#aaa;text-align:center;min-width:120px">'+d+'</th>'; }).join('') +
-    '<th style="width:36px"></th>' +
-    '</tr></thead><tbody>' +
-    franjas.map(function(row, ri) {
-      return '<tr style="border-bottom:1px solid #F0F2F5">' +
-        '<td style="padding:8px 10px">' +
-          '<input type="text" value="'+( row.franja||'' )+'" ' +
-          'onchange="_updatePFranja(''+id+'','+ri+',this.value)" ' +
-          'style="width:100%;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:.78rem" placeholder="09:00-10:00">' +
-        '</td>' +
-        dias.map(function(d) {
-          var val = (row.dias && row.dias[d]) || '';
-          var parts = val.split('|');
-          var act = parts[0]||''; var lugar = parts[1]||'';
-          return '<td style="padding:4px">' +
-            '<input type="text" value="'+act+'" placeholder="Actividad" ' +
-            'onchange="_updatePField(''+id+'','+ri+',''+d+'',this.value,this.nextElementSibling.value)" ' +
-            'style="width:100%;border:1px solid var(--border);border-radius:5px 5px 0 0;padding:4px 7px;font-size:.76rem;border-bottom:none">' +
-            '<input type="text" value="'+lugar+'" placeholder="Lugar" ' +
-            'onchange="_updatePField(''+id+'','+ri+',''+d+'',this.previousElementSibling.value,this.value)" ' +
-            'style="width:100%;border:1px solid var(--border);border-radius:0 0 5px 5px;padding:4px 7px;font-size:.72rem;color:#888">' +
-          '</td>';
-        }).join('') +
-        '<td style="padding:4px;text-align:center">' +
-          '<button onclick="_deletePFranja(''+id+'','+ri+')" style="background:none;border:none;cursor:pointer;color:#ccc;font-size:1.1rem">×</button>' +
-        '</td></tr>';
-    }).join('') +
-    '</tbody></table></div>' +
-    '<button class="btn btn-outline btn-sm" onclick="_addPFranja(''+id+'')">+ Añadir franja</button>';
+  // Build table
+  var wrap = document.createElement('div');
+  wrap.style.cssText = 'overflow-x:auto;margin-bottom:14px';
+  var table = document.createElement('table');
+  table.style.cssText = 'width:100%;border-collapse:collapse;font-size:.82rem;min-width:650px';
+
+  // Header
+  var thead = document.createElement('thead');
+  var hrow = document.createElement('tr');
+  hrow.style.background = 'var(--dark)';
+  var th0 = document.createElement('th');
+  th0.style.cssText = 'padding:10px 12px;text-align:left;color:#FFB800;width:130px';
+  th0.textContent = 'Franja';
+  hrow.appendChild(th0);
+  diasLabel.forEach(function(d) {
+    var th = document.createElement('th');
+    th.style.cssText = 'padding:10px 8px;color:#aaa;text-align:center;min-width:120px';
+    th.textContent = d;
+    hrow.appendChild(th);
+  });
+  var thDel = document.createElement('th');
+  thDel.style.width = '36px';
+  hrow.appendChild(thDel);
+  thead.appendChild(hrow);
+  table.appendChild(thead);
+
+  // Body
+  var tbody = document.createElement('tbody');
+  franjas.forEach(function(row, ri) {
+    var tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid #F0F2F5';
+
+    // Franja input
+    var td0 = document.createElement('td');
+    td0.style.cssText = 'padding:8px 10px';
+    var inp = document.createElement('input');
+    inp.type = 'text';
+    inp.value = row.franja || '';
+    inp.placeholder = '09:00-10:00';
+    inp.style.cssText = 'width:100%;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:.78rem';
+    inp.addEventListener('change', (function(r){ return function(){ _updatePFranja(id, r, this.value); }; })(ri));
+    td0.appendChild(inp);
+    tr.appendChild(td0);
+
+    // Day columns
+    dias.forEach(function(d) {
+      var val = (row.dias && row.dias[d]) || '';
+      var parts = val.split('|');
+      var act = parts[0] || '';
+      var lugar = parts[1] || '';
+      var td = document.createElement('td');
+      td.style.padding = '4px';
+      var inpAct = document.createElement('input');
+      inpAct.type = 'text';
+      inpAct.value = act;
+      inpAct.placeholder = 'Actividad';
+      inpAct.style.cssText = 'width:100%;border:1px solid var(--border);border-radius:5px 5px 0 0;padding:4px 7px;font-size:.76rem;border-bottom:none';
+      var inpLugar = document.createElement('input');
+      inpLugar.type = 'text';
+      inpLugar.value = lugar;
+      inpLugar.placeholder = 'Lugar';
+      inpLugar.style.cssText = 'width:100%;border:1px solid var(--border);border-radius:0 0 5px 5px;padding:4px 7px;font-size:.72rem;color:#888';
+      inpAct.addEventListener('change', (function(r, day, lInp){ return function(){ _updatePField(id, r, day, this.value, lInp.value); }; })(ri, d, inpLugar));
+      inpLugar.addEventListener('change', (function(r, day, aInp){ return function(){ _updatePField(id, r, day, aInp.value, this.value); }; })(ri, d, inpAct));
+      td.appendChild(inpAct);
+      td.appendChild(inpLugar);
+      tr.appendChild(td);
+    });
+
+    // Delete button
+    var tdDel = document.createElement('td');
+    tdDel.style.cssText = 'padding:4px;text-align:center';
+    var btnDel = document.createElement('button');
+    btnDel.style.cssText = 'background:none;border:none;cursor:pointer;color:#ccc;font-size:1.1rem';
+    btnDel.textContent = '×';
+    btnDel.addEventListener('click', (function(r){ return function(){ _deletePFranja(id, r); }; })(ri));
+    tdDel.appendChild(btnDel);
+    tr.appendChild(tdDel);
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  wrap.appendChild(table);
+  area.appendChild(wrap);
+
+  // Add row button
+  var btnAdd = document.createElement('button');
+  btnAdd.className = 'btn btn-outline btn-sm';
+  btnAdd.textContent = '+ Añadir franja';
+  btnAdd.addEventListener('click', function(){ _addPFranja(id); });
+  area.appendChild(btnAdd);
 }
+
 
 function _updatePFranja(id, ri, val) {
   if(!_plantillas[id]) return;
