@@ -313,15 +313,18 @@ pre.export-text{background:#F6F8FA;border-radius:var(--radius-sm);padding:14px;f
   /* SEARCH */
   #kidSearchInput{font-size:.8rem}
 
-  /* STEPS — compact horizontal scroll */
-  .steps{overflow-x:auto;flex-wrap:nowrap !important;padding-bottom:6px;-webkit-overflow-scrolling:touch}
-  .step-btn{flex-shrink:0;white-space:nowrap;padding:6px 10px;font-size:.72rem}
-  .step-btn .step-num{width:14px;height:14px;font-size:.55rem}
+  /* STEPS — 2x2 grid on mobile, all visible */
+  #stepsSearchWrap{flex-direction:column !important;gap:8px}
+  .steps{display:grid !important;grid-template-columns:1fr 1fr;gap:6px;overflow:visible !important;padding:0}
+  .step-btn{white-space:nowrap;padding:8px 10px;font-size:.78rem;justify-content:center;text-align:center;border-radius:10px}
+  .step-btn .step-num{width:16px;height:16px;font-size:.6rem}
 
-  /* STEPS + SEARCH — stack vertically on mobile */
-  #stepsSearchWrap{flex-wrap:wrap !important;gap:8px}
-  #stepsSearchWrap .steps{width:100%;flex:none}
+  /* SEARCH full width below steps */
   #stepsSearchWrap > div:last-child{width:100%;max-width:100% !important;min-width:0 !important;flex:none}
+
+  /* WEEK TABS — 2x3 grid on mobile */
+  .turno-tabs{display:grid !important;grid-template-columns:1fr 1fr;gap:6px;overflow:visible !important;padding:0}
+  .ttab{white-space:normal !important;text-align:center;padding:8px 6px;font-size:.72rem;flex-shrink:unset}
 
   /* LINKS BAR — stack each link on its own line, hide copy button text */
   #panel4 > div:first-child > div:last-child{flex-direction:column;gap:6px}
@@ -348,6 +351,7 @@ pre.export-text{background:#F6F8FA;border-radius:var(--radius-sm);padding:14px;f
     <button class="htab" onclick="showView('monitor')">🏃 Monitor</button>
     <button class="htab" onclick="showView('comedor')">🍽️ Comedor</button>
     <button class="htab" onclick="showView('monitores')">👥 Monitores</button>
+    <button class="htab" onclick="showView('stats')">📊 Stats</button>
     <button class="htab" onclick="showView('qr')">📲 QR</button>
     <button class="htab" onclick="showView('changelog')">📋 Cambios</button>
 
@@ -893,10 +897,11 @@ function showViewMobile(v, btn) {
   document.querySelectorAll('.htab').forEach(function(el){ el.classList.remove('active'); });
   var viewEl = document.getElementById('view-'+v);
   if(viewEl) viewEl.classList.add('active');
-  var badges={admin:'ADMIN · badge-admin',monitor:'MONITOR · badge-monitor',comedor:'COMEDOR · badge-comedor',monitores:'MONITORES · badge-admin',qr:'QR · badge-admin',changelog:'CAMBIOS · badge-admin'};
+  var badges={admin:'ADMIN · badge-admin',monitor:'MONITOR · badge-monitor',comedor:'COMEDOR · badge-comedor',monitores:'MONITORES · badge-admin',qr:'QR · badge-admin',changelog:'CAMBIOS · badge-admin',stats:'STATS · badge-admin'};
   var parts=(badges[v]||'ADMIN · badge-admin').split(' · ');
   if(v==='monitores') { loadMonitoresData(); setTimeout(renderMonitoresList,300); }
   if(v==='qr') { setTimeout(renderQRCodes, 100); }
+  if(v==='stats') { setTimeout(renderStats, 100); }
   if(v==='changelog') { loadChangelog(); }
   var b=document.getElementById('modeBadge');
   if(b) { b.textContent=parts[0]; b.className='header-badge '+parts[1]; }
@@ -911,6 +916,7 @@ function showView(v){
   const [txt,cls]=(badges[v]||'ADMIN · badge-admin').split(' · ');
   if(v==='monitores') { loadMonitoresData(); setTimeout(renderMonitoresList,300); }
   if(v==='qr') { setTimeout(renderQRCodes, 100); }
+  if(v==='stats') { setTimeout(renderStats, 100); }
   if(v==='changelog') { loadChangelog(); }
   const b=document.getElementById('modeBadge');
   b.textContent=txt; b.className='header-badge '+cls;
@@ -4090,6 +4096,164 @@ function findGroupIdxByName(groupName, semana) {
 }
 
 
+
+// ══════════════════════════════════════════════
+// ESTADÍSTICAS
+// ══════════════════════════════════════════════
+function renderStats() {
+  var el = document.getElementById('statsContent');
+  if(!el) return;
+
+  var semanas = Object.keys(grupos);
+  if(!semanas.length) {
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">No hay grupos cargados todavía.</div>';
+    return;
+  }
+
+  // Collect all kids (unique by name)
+  var allKids = [];
+  var kidsBySemana = {};
+  var seenIds = new Set();
+  semanas.forEach(function(s) {
+    kidsBySemana[s] = [];
+    grupos[s].forEach(function(g) {
+      g.forEach(function(k) {
+        kidsBySemana[s].push(k);
+        var uid = k.id || (k.nombre+'_'+k.n2+'_'+k.apellidos);
+        if(!seenIds.has(uid)) { seenIds.add(uid); allKids.push(k); }
+      });
+    });
+  });
+
+  var total = allKids.length;
+  var chicos = allKids.filter(function(k){ return k.genero==='M'||k.sexo==='M'||k.genero==='Masculino'; }).length;
+  var chicas = allKids.filter(function(k){ return k.genero==='F'||k.sexo==='F'||k.genero==='Femenino'; }).length;
+  var conComedor = allKids.filter(function(k){ return k.comedor; }).length;
+  var sinComedor = total - conComedor;
+
+  // Hermanos (kids sharing apellidos)
+  var apellidoMap = {};
+  allKids.forEach(function(k) {
+    var ap = (k.apellidos||k.ap1||'').trim().split(' ')[0];
+    if(ap) { apellidoMap[ap] = (apellidoMap[ap]||0)+1; }
+  });
+  var hermanos = Object.values(apellidoMap).filter(function(n){ return n>1; }).reduce(function(a,b){ return a+b; }, 0);
+  var familias = Object.values(apellidoMap).filter(function(n){ return n>1; }).length;
+
+  // Age distribution
+  var byYear = {};
+  allKids.forEach(function(k) {
+    var y = k.nacimiento||k.año||k.año_nac||'';
+    if(y) { byYear[y] = (byYear[y]||0)+1; }
+  });
+  var years = Object.keys(byYear).sort();
+
+  // Per semana stats
+  var semanaStats = semanas.map(function(s) {
+    var kids = kidsBySemana[s];
+    var nGrupos = grupos[s].length;
+    var com = kids.filter(function(k){ return k.comedor; }).length;
+    var avgSize = nGrupos ? Math.round(kids.length/nGrupos*10)/10 : 0;
+    return {semana:s, kids:kids.length, grupos:nGrupos, comedor:com, avgSize:avgSize};
+  });
+
+  // Build HTML using DOM
+  el.innerHTML = '';
+
+  function card(title, content) {
+    var d = document.createElement('div');
+    d.style.cssText = 'background:#f8f9fa;border-radius:12px;padding:16px 18px;margin-bottom:14px';
+    d.innerHTML = '<div style="font-weight:700;font-size:.88rem;color:#555;margin-bottom:12px">'+title+'</div>'+content;
+    return d;
+  }
+  function statRow(label, value, color) {
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #eee;font-size:.84rem">'+
+      '<span style="color:#666">'+label+'</span>'+
+      '<span style="font-weight:700;color:'+(color||'var(--dark)')+'">'+value+'</span>'+
+    '</div>';
+  }
+  function pct(n, total) { return total ? ' ('+Math.round(n/total*100)+'%)' : ''; }
+
+  // GLOBAL
+  var globalHtml =
+    statRow('Total niños únicos', total, 'var(--sky)') +
+    statRow('Chicos', chicos + pct(chicos,total)) +
+    statRow('Chicas', chicas + pct(chicas,total)) +
+    (total-chicos-chicas > 0 ? statRow('Sin dato de género', total-chicos-chicas) : '') +
+    statRow('Con comedor', conComedor + pct(conComedor,total), 'var(--grass)') +
+    statRow('Sin comedor', sinComedor + pct(sinComedor,total)) +
+    statRow('Hermanos/as en el campus', hermanos + ' niños de '+familias+' familias', 'var(--sun)');
+  el.appendChild(card('👥 Resumen general', globalHtml));
+
+  // PER SEMANA
+  var semanaHtml = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.82rem;min-width:400px"><thead><tr style="background:var(--dark)">'+
+    '<th style="padding:8px 12px;text-align:left;color:#FFB800">Semana</th>'+
+    '<th style="padding:8px 8px;color:#aaa;text-align:center">Niños</th>'+
+    '<th style="padding:8px 8px;color:#aaa;text-align:center">Grupos</th>'+
+    '<th style="padding:8px 8px;color:#aaa;text-align:center">Comedor</th>'+
+    '<th style="padding:8px 8px;color:#aaa;text-align:center">Media/grupo</th>'+
+    '</tr></thead><tbody>'+
+    semanaStats.map(function(s,i) {
+      return '<tr style="border-bottom:1px solid #F0F2F5;background:'+(i%2?'#f8f9fa':'#fff')+'">'+
+        '<td style="padding:8px 12px;font-weight:600">'+s.semana+'</td>'+
+        '<td style="padding:8px;text-align:center;color:var(--sky);font-weight:700">'+s.kids+'</td>'+
+        '<td style="padding:8px;text-align:center">'+s.grupos+'</td>'+
+        '<td style="padding:8px;text-align:center;color:var(--grass)">'+s.comedor+'</td>'+
+        '<td style="padding:8px;text-align:center">'+s.avgSize+'</td>'+
+      '</tr>';
+    }).join('')+
+    '</tbody></table></div>';
+  el.appendChild(card('📅 Por semana', semanaHtml));
+
+  // AGE DISTRIBUTION
+  if(years.length) {
+    var ageHtml = '<div style="display:flex;flex-wrap:wrap;gap:8px">';
+    years.forEach(function(y) {
+      var n = byYear[y];
+      var pctVal = Math.round(n/total*100);
+      ageHtml += '<div style="flex:1;min-width:100px;background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">'+
+        '<div style="font-size:1.1rem;font-weight:700;color:var(--sky)">'+n+'</div>'+
+        '<div style="font-size:.72rem;color:#666">n.'+y+'</div>'+
+        '<div style="font-size:.68rem;color:#aaa">'+pctVal+'%</div>'+
+      '</div>';
+    });
+    ageHtml += '</div>';
+    el.appendChild(card('🎂 Por año de nacimiento', ageHtml));
+  }
+
+  // TOP FAMILIES (hermanos)
+  var topFamilias = Object.entries(apellidoMap).filter(function(e){ return e[1]>1; })
+    .sort(function(a,b){ return b[1]-a[1]; }).slice(0,10);
+  if(topFamilias.length) {
+    var famHtml = topFamilias.map(function(e){
+      return statRow(e[0], e[1]+' hermanos/as');
+    }).join('');
+    el.appendChild(card('👨‍👩‍👧‍👦 Familias con varios hijos', famHtml));
+  }
+
+  // GROUPS SIZE distribution
+  var groupSizes = {};
+  semanas.forEach(function(s) {
+    grupos[s].forEach(function(g) {
+      var n = g.length;
+      groupSizes[n] = (groupSizes[n]||0)+1;
+    });
+  });
+  var sizes = Object.keys(groupSizes).map(Number).sort(function(a,b){return a-b;});
+  var allGroupsList = [];
+  semanas.forEach(function(s){ grupos[s].forEach(function(g){ allGroupsList.push(g.length); }); });
+  var minSize = Math.min.apply(null,allGroupsList);
+  var maxSize = Math.max.apply(null,allGroupsList);
+  var avgSize = Math.round(allGroupsList.reduce(function(a,b){return a+b;},0)/allGroupsList.length*10)/10;
+  var sizeHtml =
+    statRow('Grupos totales', allGroupsList.length) +
+    statRow('Tamaño mínimo', minSize+' niños') +
+    statRow('Tamaño máximo', maxSize+' niños') +
+    statRow('Tamaño medio', avgSize+' niños');
+  el.appendChild(card('📐 Tamaño de grupos', sizeHtml));
+}
+
+
 // ══════════════════════════════════════════════
 // QR CODES
 // ══════════════════════════════════════════════
@@ -4567,10 +4731,23 @@ document.addEventListener('DOMContentLoaded', function() {
   <button class="mobile-nav-btn" id="mbn-monitores" onclick="showViewMobile('monitores',this)">
     <span>👥</span><span>Monitores</span>
   </button>
+  <button class="mobile-nav-btn" id="mbn-stats" onclick="showViewMobile('stats',this)">
+    <span>📊</span><span>Stats</span>
+  </button>
   <button class="mobile-nav-btn" id="mbn-qr" onclick="showViewMobile('qr',this)">
     <span>📲</span><span>QR</span>
   </button>
 </nav>
+
+<!-- ══════════ VISTA STATS ══════════ -->
+<div class="view" id="view-stats">
+  <div class="container" style="max-width:800px">
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title">📊 Estadísticas del campus</div>
+      <div id="statsContent"><div style="text-align:center;padding:40px;color:var(--muted)">Cargando estadísticas...</div></div>
+    </div>
+  </div>
+</div>
 
 <!-- ══════════ VISTA QR ══════════ -->
 <div class="view" id="view-qr">
