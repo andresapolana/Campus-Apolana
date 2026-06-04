@@ -3068,9 +3068,9 @@ function renderPlantillasList() {
           '<div style="font-weight:700;font-size:.9rem">'+p.nombre+'</div>' +
           '<div style="font-size:.75rem;color:var(--muted)">'+nFranjas+' franjas horarias</div>' +
         '</div>' +
-        '<button class="btn btn-outline btn-sm" onclick="openPlantillaEditor(''+id+'')">✏️ Editar</button>' +
-        '<button class="btn btn-outline btn-sm" onclick="duplicatePlantilla(''+id+'')">📋 Duplicar</button>' +
-        '<button class="btn btn-danger btn-sm" onclick="deletePlantilla(''+id+'')">🗑️</button>' +
+        '<button class="btn btn-outline btn-sm" onclick="openPlantillaEditor(\'' + id + '\')">✏️ Editar</button>' +
+        '<button class="btn btn-outline btn-sm" onclick="duplicatePlantilla(\'' + id + '\')">📋 Duplicar</button>' +
+        '<button class="btn btn-danger btn-sm" onclick="deletePlantilla(\'' + id + '\')">🗑️</button>' +
       '</div>';
     }).join('') + '</div>';
 }
