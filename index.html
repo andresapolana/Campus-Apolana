@@ -521,18 +521,22 @@ pre.export-text{background:#F6F8FA;border-radius:var(--radius-sm);padding:14px;f
   <!-- PASO 4: GRUPOS + EDICIÓN -->
   <div class="panel" id="panel4">
     <!-- ENLACES PARA COMPARTIR -->
-    <div style="background:#0A0E14;border-radius:var(--radius);padding:14px 16px;margin-bottom:16px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;overflow:hidden">
-      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.85rem;color:#FFB800;white-space:nowrap">🔗 Enlaces para compartir:</div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;flex:1">
-        <div style="display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.06);border-radius:8px;padding:7px 10px;flex:1;min-width:0;overflow:hidden">
-          <span style="font-size:.72rem;color:#aaa;white-space:nowrap">👨‍👩‍👧 Padres:</span>
-          <span style="font-family:'DM Mono',monospace;font-size:.72rem;color:#fff;flex:1;overflow:hidden;text-overflow:ellipsis" id="link-padres">cargando...</span>
-          <button onclick="copyLink('link-padres')" style="background:none;border:1px solid #555;color:#aaa;border-radius:5px;padding:3px 8px;cursor:pointer;font-size:.7rem;white-space:nowrap;font-family:'Instrument Sans',sans-serif" title="Copiar">📋</button>
+    <div style="background:#0A0E14;border-radius:var(--radius);padding:14px 16px;margin-bottom:16px">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.85rem;color:#FFB800;margin-bottom:10px">🔗 Enlaces para compartir</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="background:rgba(255,255,255,.06);border-radius:8px;padding:9px 12px">
+          <div style="font-size:.7rem;color:#aaa;margin-bottom:4px">👨‍👩‍👧 Padres</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:.72rem;color:#fff;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="link-padres">cargando...</span>
+            <button onclick="copyLink('link-padres')" style="background:#FFB800;border:none;color:#000;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:.72rem;font-weight:700;white-space:nowrap;flex-shrink:0">📋 Copiar</button>
+          </div>
         </div>
-        <div style="display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.06);border-radius:8px;padding:7px 10px;flex:1;min-width:0;overflow:hidden">
-          <span style="font-size:.72rem;color:#aaa;white-space:nowrap">🏃 Monitores:</span>
-          <span style="font-family:'DM Mono',monospace;font-size:.72rem;color:#fff;flex:1;overflow:hidden;text-overflow:ellipsis" id="link-monitor">cargando...</span>
-          <button onclick="copyLink('link-monitor')" style="background:none;border:1px solid #555;color:#aaa;border-radius:5px;padding:3px 8px;cursor:pointer;font-size:.7rem;white-space:nowrap;font-family:'Instrument Sans',sans-serif" title="Copiar">📋</button>
+        <div style="background:rgba(255,255,255,.06);border-radius:8px;padding:9px 12px">
+          <div style="font-size:.7rem;color:#aaa;margin-bottom:4px">🏃 Monitores</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:.72rem;color:#fff;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="link-monitor">cargando...</span>
+            <button onclick="copyLink('link-monitor')" style="background:#00C46A;border:none;color:#fff;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:.72rem;font-weight:700;white-space:nowrap;flex-shrink:0">📋 Copiar</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1003,6 +1007,7 @@ function buildMapper(){
     {key:'matinera',  label:'🌅 Servicio de Matinera',      hints:['matinera','matin']},
     {key:'comedor',   label:'🍽️ Comedor (Sí/No)',           hints:['comedor','almuerzo','lunch']},
     {key:'alergias',  label:'⚠️ Alergias',                  hints:['alergia','dieta','intoler','allerg']},
+    {key:'sexo',         label:'⚧ Sexo / Género',             hints:['sexo','género','genero','sex','gender']},
     {key:'observaciones',label:'💬 Observaciones',          hints:['observa','comentar','amigo','nota']},
   ];
 
@@ -1085,6 +1090,7 @@ function generateGroups(){
     id:String(idx),
     nombre:row[mapping.nombre]||'(sin nombre)',
     apellidos:mapping.apellidos?row[mapping.apellidos]:'',
+    sexo:mapping.sexo?String(row[mapping.sexo]||'').trim():'',
     edad:extractAge(row[mapping.edad])||extractAge(row[mapping.fechaNac]),
     anoNac:extractYear(row[mapping.fechaNac])||extractYear(row[mapping.edad]),
     semanas:['s1','s2','s3','s4','s5'].filter(s=>mapping[s]&&isComedor(row[mapping[s]])),
@@ -4110,7 +4116,7 @@ function renderStats() {
     return;
   }
 
-  // Collect all kids — unique by "Nombre alumno/a" + "Apellidos alumno/a"
+  // Collect all kids — unique by nombre + apellidos
   var allKids = [];
   var kidsBySemana = {};
   var seenIds = new Set();
@@ -4119,24 +4125,21 @@ function renderStats() {
     grupos[s].forEach(function(g) {
       g.forEach(function(k) {
         kidsBySemana[s].push(k);
-        // Use full name as unique key
-        var nombre = (k['Nombre alumno/a']||k.nombre||k.n1||'').trim().toLowerCase();
-        var apellidos = (k['Apellidos alumno/a']||k.apellidos||'').trim().toLowerCase();
-        var uid = nombre + '___' + apellidos;
+        var uid = (k.nombre||'').trim().toLowerCase() + '___' + (k.apellidos||'').trim().toLowerCase();
         if(!seenIds.has(uid)) { seenIds.add(uid); allKids.push(k); }
       });
     });
   });
 
   var total = allKids.length;
-  // Sexo field
+  // Sexo field — stored as k.sexo
   var chicos = allKids.filter(function(k){
-    var s = (k['Sexo']||k.sexo||k.genero||k.género||'').toString().trim().toUpperCase();
-    return s==='M'||s==='MASCULINO'||s==='HOMBRE'||s==='H';
+    var s = (k.sexo||'').toString().trim().toUpperCase();
+    return s==='M'||s==='MASCULINO'||s==='HOMBRE'||s==='H'||s==='CHICO';
   }).length;
   var chicas = allKids.filter(function(k){
-    var s = (k['Sexo']||k.sexo||k.genero||k.género||'').toString().trim().toUpperCase();
-    return s==='F'||s==='FEMENINO'||s==='MUJER'||s==='V';
+    var s = (k.sexo||'').toString().trim().toUpperCase();
+    return s==='F'||s==='FEMENINO'||s==='MUJER'||s==='V'||s==='CHICA';
   }).length;
   var conComedor = allKids.filter(function(k){ return k.comedor; }).length;
   var sinComedor = total - conComedor;
