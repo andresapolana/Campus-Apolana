@@ -679,45 +679,57 @@ pre.export-text{background:#F6F8FA;border-radius:var(--radius-sm);padding:14px;f
 
   <!-- TAB: HORARIOS -->
   <div id="mtab-horarios-panel" style="display:none">
-    <div class="card" style="margin-bottom:16px">
-      <div class="card-title">🗓️ Editor de horario por color</div>
-      <div class="card-desc">Los horarios se definen por color (Rojo, Verde, Azul, Amarillo) y semana. Todos los grupos del mismo color comparten horario.</div>
 
-      <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;align-items:flex-end">
-        <div class="field" style="min-width:160px">
-          <label>Semana</label>
-          <select id="hor-semana" onchange="renderHorarioEditor()" style="margin-top:4px">
-            <option value="">— Semana —</option>
-            <option value="Semana 1">Semana 1</option>
-            <option value="Semana 2">Semana 2</option>
-            <option value="Semana 3">Semana 3</option>
-            <option value="Semana 4">Semana 4</option>
-            <option value="Semana 5">Semana 5</option>
-          </select>
+    <!-- Sub-tabs -->
+    <div style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap">
+      <button class="ttab active" id="htab-plantillas" onclick="showHorarioTab('plantillas',this)">📋 Plantillas de horario</button>
+      <button class="ttab" id="htab-asignacion" onclick="showHorarioTab('asignacion',this)">📅 Asignación por color y semana</button>
+    </div>
+
+    <!-- PLANTILLAS -->
+    <div id="htab-plantillas-panel">
+      <div class="card" style="margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px">
+          <div>
+            <div class="card-title" style="margin:0">📋 Plantillas de horario</div>
+            <div class="card-desc" style="margin:0">Crea modelos de horario reutilizables. Luego los asignas a cada color y semana.</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-primary btn-sm" onclick="addPlantilla()">+ Nueva plantilla</button>
+            <button class="btn btn-outline btn-sm" onclick="downloadHorarioTemplate()">⬇️ Plantilla Excel</button>
+          </div>
         </div>
-        <div class="field" style="min-width:160px">
-          <label>Color de grupo</label>
-          <select id="hor-color" onchange="renderHorarioEditor()" style="margin-top:4px">
-            <option value="">— Color —</option>
-            <option value="Rojo">🔴 Rojo</option>
-            <option value="Verde">🟢 Verde</option>
-            <option value="Azul">🔵 Azul</option>
-            <option value="Amarillo">🟡 Amarillo</option>
-            <option value="Naranja">🟠 Naranja</option>
-            <option value="Morado">🟣 Morado</option>
-          </select>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-outline btn-sm" onclick="downloadHorarioTemplate()">⬇️ Plantilla Excel</button>
-          <label class="btn btn-outline btn-sm" style="cursor:pointer;margin:0">
-            📥 Importar Excel
-            <input type="file" accept=".xlsx,.xls" onchange="importHorarioExcel(this)" style="display:none">
-          </label>
+        <div id="plantillas-list"></div>
+      </div>
+      <!-- Editor de plantilla seleccionada -->
+      <div id="plantilla-editor-wrap" style="display:none">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+            <div class="card-title" style="margin:0">✏️ Editando: <span id="plantilla-editor-name">—</span></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <label class="btn btn-outline btn-sm" style="cursor:pointer;margin:0">
+                📥 Importar Excel
+                <input type="file" accept=".xlsx,.xls" onchange="importPlantillaExcel(this)" style="display:none">
+              </label>
+              <button class="btn btn-success btn-sm" onclick="savePlantilla()">💾 Guardar plantilla</button>
+              <button class="btn btn-outline btn-sm" onclick="closePlantillaEditor()">✕ Cerrar</button>
+            </div>
+          </div>
+          <div id="plantilla-editor-area"></div>
         </div>
       </div>
-
-      <div id="horario-editor-area"></div>
     </div>
+
+    <!-- ASIGNACIÓN -->
+    <div id="htab-asignacion-panel" style="display:none">
+      <div class="card">
+        <div class="card-title">📅 Asignar plantillas a colores y semanas</div>
+        <div class="card-desc">Para cada color y semana, elige qué plantilla de horario usar.</div>
+        <div id="horario-asignacion-grid" style="margin-top:16px"></div>
+        <button class="btn btn-success btn-sm" style="margin-top:16px" onclick="saveHorarioAsignaciones()">💾 Guardar asignaciones</button>
+      </div>
+    </div>
+
   </div>
 
 </div>
@@ -1580,18 +1592,22 @@ async function renderAttendList(){
   if(horarioEl) {
     var grpName = getGroupName(monitorGroup.groupIdx);
     var grpColor = getColorFromGroupName(grpName);
-    var hkey = grpColor ? getHorarioKey(monitorGroup.turno, grpColor) : null;
-    var horario = hkey ? (_horarios[hkey]||null) : null;
+    var plantilla = grpColor ? getPlantillaForGroup(monitorGroup.turno, monitorGroup.groupIdx) : null;
+    var horario = plantilla ? plantilla.franjas : null;
     var all = getAllCampusDays();
     var dayDate = all[Math.max(0,Math.min(currentDateOffset,all.length-1))];
     var dayName = dayDate ? ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'][dayDate.getDay()] : '';
     if(horario && dayName && ['Lunes','Martes','Miércoles','Jueves','Viernes'].indexOf(dayName)>=0) {
-      var rows = horario.filter(function(r){ return r.dias && r.dias[dayName]; });
+      // Normalize day name for lookup (handle accent)
+    var dayKey = dayName.replace('é','e').replace('é','e');
+    var rows = horario.filter(function(r){ return r.dias && (r.dias[dayName]||r.dias[dayKey]); });
+    // Use whichever key has data
+    rows = rows.map(function(r){ return {franja:r.franja, dia:r.dias[dayName]||r.dias[dayKey]}; });
       if(rows.length) {
         horarioEl.innerHTML = '<div style="margin-bottom:12px;background:#f8f9fa;border-radius:10px;padding:12px 14px">' +
           '<div style="font-weight:700;font-size:.82rem;color:#555;margin-bottom:8px">📅 Horario de hoy · '+dayName+'</div>' +
           rows.map(function(r){
-            var parts = (r.dias[dayName]||'').split('|');
+            var parts = (r.dia||'').split('|');
             var act=parts[0]||''; var lugar=parts[1]||'';
             return '<div style="display:flex;gap:8px;align-items:baseline;padding:4px 0;border-bottom:1px solid #eee;font-size:.8rem">' +
               '<span style="font-family:monospace;color:#888;font-size:.72rem;flex-shrink:0;min-width:90px">'+r.franja+'</span>' +
@@ -2827,12 +2843,16 @@ function saveObs(encodedName, turnoEsc) {
 // ══════════════════════════════════════════════
 let _monitores = []; // [{nombre, codigo}]
 let _asignaciones = {}; // {semana: {grupoIdx: codigoMonitor}}
-let _horarios = {}; // {semana_grupo: [{hora, actividad}]}
+let _horarios = {}; // legacy - kept for compat
+let _plantillas = {}; // {id: {nombre, franjas: [{franja, dias:{Lunes:'act|lugar',...}}]}}
+let _horarioAsignaciones = {}; // {semana+'__'+color: plantillaId}
+let _editingPlantillaId = null;
+var COLORES_CAMPUS = ['Rojo','Verde','Azul','Amarillo','Naranja','Morado'];
 let _editingMonitorIdx = -1;
 
 // Load/save monitors from Firebase/localStorage
 function saveMonitoresData() {
-  const data = {monitores: _monitores, asignaciones: _asignaciones, horarios: _horarios};
+  const data = {monitores: _monitores, asignaciones: _asignaciones, horarios: _horarios, plantillas: _plantillas, horarioAsignaciones: _horarioAsignaciones};
   const json = JSON.stringify(data);
   // Always save to localStorage immediately
   try { localStorage.setItem('campusMonitores', json); } catch(e) {}
@@ -2864,6 +2884,8 @@ function loadMonitoresData() {
             _monitores = p.monitores||[];
             _asignaciones = p.asignaciones||{};
             _horarios = p.horarios||{};
+            _plantillas = p.plantillas||{};
+            _horarioAsignaciones = p.horarioAsignaciones||{};
             try { localStorage.setItem('campusMonitores', snap.data().data); } catch(e) {}
             renderMonitoresList();
           }
@@ -2880,7 +2902,7 @@ function showMonitorTab(tab, btn) {
   });
   if(tab==='lista') renderMonitoresList();
   if(tab==='asignacion') renderAsignacion();
-  if(tab==='horarios') populateHorGrupo();
+  if(tab==='horarios') { populateHorGrupo(); renderPlantillasList(); }
 }
 
 function openAddMonitor() {
@@ -3003,6 +3025,278 @@ function saveAsignacion() {
 const DIAS = ['Lunes','Martes','Miércoles','Jueves','Viernes'];
 const DEFAULT_FRANJAS = ['08:00–09:00','09:00–09:30','09:30–10:30','10:30–11:00','11:00–12:30','12:30–14:00','14:00–15:00','15:00–16:30','16:30–17:00'];
 
+// ══════════════════════════════════════════════
+// SISTEMA DE PLANTILLAS DE HORARIO
+// ══════════════════════════════════════════════
+
+function showHorarioTab(tab, btn) {
+  document.querySelectorAll('[id^="htab-"][id$="-panel"]').forEach(function(el){ el.style.display='none'; });
+  document.querySelectorAll('[id^="htab-"]').forEach(function(el){ el.classList.remove('active'); });
+  document.getElementById('htab-'+tab+'-panel').style.display='block';
+  if(btn) btn.classList.add('active');
+  if(tab==='plantillas') renderPlantillasList();
+  if(tab==='asignacion') renderHorarioAsignacionGrid();
+}
+
+function makePlantillaId() {
+  return 'p_' + Date.now();
+}
+
+function addPlantilla() {
+  var nombre = prompt('Nombre de la plantilla (ej: Horario A, Horario Piscina...):');
+  if(!nombre || !nombre.trim()) return;
+  var id = makePlantillaId();
+  _plantillas[id] = {nombre: nombre.trim(), franjas: []};
+  renderPlantillasList();
+  openPlantillaEditor(id);
+}
+
+function renderPlantillasList() {
+  var el = document.getElementById('plantillas-list');
+  if(!el) return;
+  var ids = Object.keys(_plantillas);
+  if(!ids.length) {
+    el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted)">No hay plantillas todavía. Crea una con el botón + Nueva plantilla.</div>';
+    return;
+  }
+  el.innerHTML = '<div style="display:flex;flex-direction:column;gap:8px">' +
+    ids.map(function(id) {
+      var p = _plantillas[id];
+      var nFranjas = (p.franjas||[]).length;
+      return '<div style="display:flex;align-items:center;gap:12px;background:#f8f9fa;border-radius:10px;padding:12px 16px;border:1px solid var(--border)">' +
+        '<div style="flex:1">' +
+          '<div style="font-weight:700;font-size:.9rem">'+p.nombre+'</div>' +
+          '<div style="font-size:.75rem;color:var(--muted)">'+nFranjas+' franjas horarias</div>' +
+        '</div>' +
+        '<button class="btn btn-outline btn-sm" onclick="openPlantillaEditor(''+id+'')">✏️ Editar</button>' +
+        '<button class="btn btn-outline btn-sm" onclick="duplicatePlantilla(''+id+'')">📋 Duplicar</button>' +
+        '<button class="btn btn-danger btn-sm" onclick="deletePlantilla(''+id+'')">🗑️</button>' +
+      '</div>';
+    }).join('') + '</div>';
+}
+
+function openPlantillaEditor(id) {
+  _editingPlantillaId = id;
+  var p = _plantillas[id];
+  document.getElementById('plantilla-editor-name').textContent = p.nombre;
+  document.getElementById('plantilla-editor-wrap').style.display='block';
+  renderPlantillaEditor();
+  document.getElementById('plantilla-editor-wrap').scrollIntoView({behavior:'smooth'});
+}
+
+function closePlantillaEditor() {
+  _editingPlantillaId = null;
+  document.getElementById('plantilla-editor-wrap').style.display='none';
+}
+
+function renderPlantillaEditor() {
+  var id = _editingPlantillaId;
+  if(!id || !_plantillas[id]) return;
+  var p = _plantillas[id];
+  var franjas = p.franjas || [];
+  var area = document.getElementById('plantilla-editor-area');
+  if(!area) return;
+
+  var dias = ['Lunes','Martes','Miercoles','Jueves','Viernes'];
+  var diasLabel = ['Lunes','Martes','Miérc.','Jueves','Viernes'];
+
+  area.innerHTML = '<div style="overflow-x:auto;margin-bottom:14px">' +
+    '<table style="width:100%;border-collapse:collapse;font-size:.82rem;min-width:650px">' +
+    '<thead><tr style="background:var(--dark)">' +
+    '<th style="padding:10px 12px;text-align:left;color:#FFB800;width:130px">Franja</th>' +
+    diasLabel.map(function(d){ return '<th style="padding:10px 8px;color:#aaa;text-align:center;min-width:120px">'+d+'</th>'; }).join('') +
+    '<th style="width:36px"></th>' +
+    '</tr></thead><tbody>' +
+    franjas.map(function(row, ri) {
+      return '<tr style="border-bottom:1px solid #F0F2F5">' +
+        '<td style="padding:8px 10px">' +
+          '<input type="text" value="'+( row.franja||'' )+'" ' +
+          'onchange="_updatePFranja(''+id+'','+ri+',this.value)" ' +
+          'style="width:100%;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:.78rem" placeholder="09:00-10:00">' +
+        '</td>' +
+        dias.map(function(d) {
+          var val = (row.dias && row.dias[d]) || '';
+          var parts = val.split('|');
+          var act = parts[0]||''; var lugar = parts[1]||'';
+          return '<td style="padding:4px">' +
+            '<input type="text" value="'+act+'" placeholder="Actividad" ' +
+            'onchange="_updatePField(''+id+'','+ri+',''+d+'',this.value,this.nextElementSibling.value)" ' +
+            'style="width:100%;border:1px solid var(--border);border-radius:5px 5px 0 0;padding:4px 7px;font-size:.76rem;border-bottom:none">' +
+            '<input type="text" value="'+lugar+'" placeholder="Lugar" ' +
+            'onchange="_updatePField(''+id+'','+ri+',''+d+'',this.previousElementSibling.value,this.value)" ' +
+            'style="width:100%;border:1px solid var(--border);border-radius:0 0 5px 5px;padding:4px 7px;font-size:.72rem;color:#888">' +
+          '</td>';
+        }).join('') +
+        '<td style="padding:4px;text-align:center">' +
+          '<button onclick="_deletePFranja(''+id+'','+ri+')" style="background:none;border:none;cursor:pointer;color:#ccc;font-size:1.1rem">×</button>' +
+        '</td></tr>';
+    }).join('') +
+    '</tbody></table></div>' +
+    '<button class="btn btn-outline btn-sm" onclick="_addPFranja(''+id+'')">+ Añadir franja</button>';
+}
+
+function _updatePFranja(id, ri, val) {
+  if(!_plantillas[id]) return;
+  if(!_plantillas[id].franjas[ri]) _plantillas[id].franjas[ri] = {franja:'',dias:{}};
+  _plantillas[id].franjas[ri].franja = val;
+}
+function _updatePField(id, ri, dia, act, lugar) {
+  if(!_plantillas[id]) return;
+  if(!_plantillas[id].franjas[ri]) _plantillas[id].franjas[ri] = {franja:'',dias:{}};
+  if(!_plantillas[id].franjas[ri].dias) _plantillas[id].franjas[ri].dias = {};
+  _plantillas[id].franjas[ri].dias[dia] = act + (lugar?'|'+lugar:'');
+}
+function _addPFranja(id) {
+  if(!_plantillas[id]) return;
+  _plantillas[id].franjas.push({franja:'', dias:{}});
+  renderPlantillaEditor();
+}
+function _deletePFranja(id, ri) {
+  if(!_plantillas[id]) return;
+  _plantillas[id].franjas.splice(ri,1);
+  renderPlantillaEditor();
+}
+
+function savePlantilla() {
+  if(!_editingPlantillaId) return;
+  saveMonitoresData();
+  renderPlantillasList();
+  showToast('💾 Plantilla guardada ✅','success');
+  logChange('save', 'Plantilla guardada: '+(_plantillas[_editingPlantillaId]||{}).nombre);
+}
+
+function duplicatePlantilla(id) {
+  var p = _plantillas[id];
+  if(!p) return;
+  var newId = makePlantillaId();
+  _plantillas[newId] = JSON.parse(JSON.stringify(p));
+  _plantillas[newId].nombre = p.nombre + ' (copia)';
+  saveMonitoresData();
+  renderPlantillasList();
+  showToast('📋 Plantilla duplicada','success');
+}
+
+function deletePlantilla(id) {
+  if(!confirm('¿Eliminar la plantilla "'+(_plantillas[id]||{}).nombre+'"?')) return;
+  delete _plantillas[id];
+  // Remove any assignments using this plantilla
+  Object.keys(_horarioAsignaciones).forEach(function(k){
+    if(_horarioAsignaciones[k]===id) delete _horarioAsignaciones[k];
+  });
+  saveMonitoresData();
+  renderPlantillasList();
+  if(_editingPlantillaId===id) closePlantillaEditor();
+  showToast('🗑️ Plantilla eliminada','success');
+}
+
+function importPlantillaExcel(input) {
+  var id = _editingPlantillaId;
+  if(!id) { showToast('⚠️ Abre una plantilla primero','error'); input.value=''; return; }
+  var file = input.files[0];
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var wb = XLSX.read(e.target.result, {type:'array'});
+      var ws = wb.Sheets[wb.SheetNames[0]];
+      var data = XLSX.utils.sheet_to_json(ws, {header:1});
+      var dias = ['Lunes','Martes','Miercoles','Jueves','Viernes'];
+      var rows = [];
+      for(var i=1;i<data.length;i++) {
+        var row = data[i];
+        if(!row || !row[0]) continue;
+        var diasObj = {};
+        for(var d=0;d<5;d++) {
+          var act = (row[1+d*2]||'').toString().trim();
+          var lugar = (row[2+d*2]||'').toString().trim();
+          if(act||lugar) diasObj[dias[d]] = act + (lugar?'|'+lugar:'');
+        }
+        rows.push({franja:(row[0]||'').toString().trim(), dias:diasObj});
+      }
+      _plantillas[id].franjas = rows;
+      renderPlantillaEditor();
+      showToast('📥 Importadas '+rows.length+' franjas ✅','success');
+    } catch(err) {
+      showToast('❌ Error: '+err.message,'error');
+    }
+    input.value='';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ══════════════════════════════════════════════
+// ASIGNACIÓN DE PLANTILLAS A COLORES/SEMANAS
+// ══════════════════════════════════════════════
+
+function renderHorarioAsignacionGrid() {
+  var el = document.getElementById('horario-asignacion-grid');
+  if(!el) return;
+  var semanas = ['Semana 1','Semana 2','Semana 3','Semana 4','Semana 5'];
+  var colores = COLORES_CAMPUS;
+  var ids = Object.keys(_plantillas);
+
+  if(!ids.length) {
+    el.innerHTML = '<p style="color:var(--muted);font-size:.85rem">Primero crea plantillas en la pestaña "Plantillas de horario".</p>';
+    return;
+  }
+
+  var opts = '<option value="">— Sin horario —</option>' +
+    ids.map(function(id){ return '<option value="'+id+'">'+_plantillas[id].nombre+'</option>'; }).join('');
+
+  var html = '<div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:.83rem;min-width:500px;width:100%">' +
+    '<thead><tr style="background:var(--dark)">' +
+    '<th style="padding:10px 14px;text-align:left;color:#FFB800">Color</th>' +
+    semanas.map(function(s){ return '<th style="padding:10px 10px;color:#aaa;text-align:center">'+s+'</th>'; }).join('') +
+    '</tr></thead><tbody>' +
+    colores.map(function(color) {
+      var colorMap = {Rojo:'#E53935',Verde:'#43A047',Azul:'#1E88E5',Amarillo:'#F9A825',Naranja:'#FB8C00',Morado:'#8E24AA'};
+      return '<tr style="border-bottom:1px solid #F0F2F5">' +
+        '<td style="padding:10px 14px;font-weight:700">' +
+          '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:'+colorMap[color]+';margin-right:6px"></span>'+color+
+        '</td>' +
+        semanas.map(function(semana) {
+          var key = semana+'__'+color;
+          var val = _horarioAsignaciones[key]||'';
+          return '<td style="padding:6px 8px;text-align:center">' +
+            '<select id="hasig-'+key+'" style="border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:.78rem;width:100%">'+
+            opts.replace('value="'+val+'"','value="'+val+'" selected') +
+            '</select></td>';
+        }).join('') +
+      '</tr>';
+    }).join('') +
+    '</tbody></table></div>';
+
+  el.innerHTML = html;
+}
+
+function saveHorarioAsignaciones() {
+  var semanas = ['Semana 1','Semana 2','Semana 3','Semana 4','Semana 5'];
+  COLORES_CAMPUS.forEach(function(color) {
+    semanas.forEach(function(semana) {
+      var key = semana+'__'+color;
+      var sel = document.getElementById('hasig-'+key);
+      if(sel) _horarioAsignaciones[key] = sel.value;
+    });
+  });
+  saveMonitoresData();
+  showToast('✅ Asignaciones guardadas','success');
+}
+
+// Get plantilla for a group (used by monitor view)
+function getPlantillaForGroup(semana, gi) {
+  var name = getGroupName(gi);
+  var color = getColorFromGroupName(name);
+  if(!color) return null;
+  var key = semana+'__'+color;
+  var plantillaId = _horarioAsignaciones[key];
+  if(!plantillaId || !_plantillas[plantillaId]) return null;
+  return _plantillas[plantillaId];
+}
+
+function populateHorGrupo() {
+  renderPlantillasList();
+}
+
 function populateHorGrupo() {
   renderHorarioEditor();
 }
@@ -3014,10 +3308,8 @@ function getColorFromGroupName(name) {
   return null;
 }
 function getHorarioForGroup(semana, gi) {
-  var name = getGroupName(gi);
-  var color = getColorFromGroupName(name);
-  if(!color) return null;
-  return _horarios[getHorarioKey(semana, color)] || null;
+  // Alias for backwards compat - now uses plantillas system
+  return getPlantillaForGroup(semana, gi);
 }
 
 function renderHorarioEditor() {
@@ -3472,7 +3764,7 @@ function confirmAddKid(turnoEsc, gi) {
   // Load monitores from localStorage immediately
   try {
     const m = localStorage.getItem('campusMonitores');
-    if(m) { const p=JSON.parse(m); _monitores=p.monitores||[]; _asignaciones=p.asignaciones||{}; _horarios=p.horarios||{}; }
+    if(m) { const p=JSON.parse(m); _monitores=p.monitores||[]; _asignaciones=p.asignaciones||{}; _horarios=p.horarios||{}; _plantillas=p.plantillas||{}; _horarioAsignaciones=p.horarioAsignaciones||{}; }
   } catch(e) {}
 
   // 1. Cargar grupos desde localStorage inmediatamente (sin esperar Firebase)
