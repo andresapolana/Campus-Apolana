@@ -256,57 +256,71 @@ pre.export-text{background:#F6F8FA;border-radius:var(--radius-sm);padding:14px;f
   /* Show mobile nav, hide desktop tabs */
   .mobile-nav { display: flex !important; }
   .header-tabs { display: none !important; }
-  body { padding-bottom: 70px; }
+  body { padding-bottom: 75px; }
 
-  /* MOBILE NAV */
+  /* HEADER */
   .app-header{height:52px;padding:0 12px}
-  .header-tabs{gap:0;overflow-x:auto;scrollbar-width:none}
-  .header-tabs::-webkit-scrollbar{display:none}
-  .htab{padding:5px 10px;font-size:.75rem}
 
-  /* MOBILE CONTAINER */
-  .container{padding:14px 12px}
+  /* CONTAINER */
+  .container{padding:12px 10px}
 
-  /* MOBILE STEPS */
-  .steps{gap:4px}
-  .step-btn{padding:6px 10px;font-size:.72rem}
+  /* STEPS — horizontal scrollable row */
+  .steps{gap:6px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .steps::-webkit-scrollbar{display:none}
+  .step-btn{padding:7px 12px;font-size:.74rem;white-space:nowrap;flex-shrink:0}
   .step-num{width:16px;height:16px;font-size:.58rem}
 
-  /* MOBILE STATS */
-  .stats-bar{gap:8px}
-  .stat{min-width:70px;padding:10px 12px}
+  /* STATS — all in one scrollable row */
+  .stats-bar{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:8px;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-bottom:4px}
+  .stats-bar::-webkit-scrollbar{display:none}
+  .stat{min-width:80px;flex-shrink:0;padding:10px 10px;text-align:center}
   .stat-num{font-size:1.4rem}
-  .stat-label{font-size:.62rem}
+  .stat-label{font-size:.58rem}
 
-  /* MOBILE BUTTONS */
-  .btn{padding:8px 12px;font-size:.78rem}
-  .btn-sm{padding:5px 9px;font-size:.7rem}
+  /* BUTTONS — wrap nicely */
+  .btn{padding:8px 11px;font-size:.78rem}
+  .btn-sm{padding:6px 9px;font-size:.7rem}
 
-  /* MOBILE GRUPOS */
+  /* ACTION BUTTONS ROW */
+  div[style*="display:flex"][style*="gap:8px"][style*="flex-wrap:wrap"]{gap:6px}
+
+  /* GRUPOS */
   .grupo-card{margin-bottom:10px}
   .grupo-header{padding:10px 12px}
   .grupo-body{padding:8px 10px}
 
-  /* MOBILE TURNO TABS */
-  .turno-tabs{gap:5px;padding-bottom:6px}
-  .ttab{padding:6px 10px;font-size:.72rem}
+  /* TURNO TABS */
+  .turno-tabs{gap:5px;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none}
+  .turno-tabs::-webkit-scrollbar{display:none}
+  .ttab{padding:6px 10px;font-size:.72rem;white-space:nowrap;flex-shrink:0}
 
-  /* MOBILE MONITOR */
-  .monitor-wrap{padding:14px 10px}
+  /* MONITOR */
   .attend-item{padding:9px 10px;gap:8px}
   .attend-name{font-size:.84rem}
   .attend-avatar{width:30px;height:30px;font-size:.68rem}
   .save-bar{padding:9px 10px;gap:7px}
 
-  /* MOBILE CARD */
-  .card{padding:16px 14px}
+  /* CARDS */
+  .card{padding:14px 12px}
   .card-title{font-size:.95rem}
 
-  /* SEARCH BAR MOBILE */
+  /* SEARCH */
   #kidSearchInput{font-size:.8rem}
 
-  /* LINKS BAR MOBILE */
+  /* STEPS — force horizontal scroll */
+  .steps{overflow-x:auto;flex-wrap:nowrap !important;padding-bottom:6px}
+  .step-btn{flex-shrink:0;white-space:nowrap}
+
+  /* LINKS BAR — stack each link on its own line */
+  #panel4 > div:first-child > div:last-child{flex-direction:column}
+  #panel4 > div:first-child > div:last-child > div{min-width:0 !important;width:100%}
+
+  /* LINKS BAR */
   .comedor-wrap{padding:0}
+
+  /* MOBILE NAV ICONS */
+  .mobile-nav-btn span:first-child{font-size:1.3rem}
+  .mobile-nav-btn{font-size:.6rem;padding:5px 2px}
 }
 </style>
 </head>
@@ -340,8 +354,8 @@ pre.export-text{background:#F6F8FA;border-radius:var(--radius-sm);padding:14px;f
     <button class="btn btn-outline btn-sm" onclick="document.getElementById('savedGroupsBanner').style.display='none'">Ignorar</button>
   </div>
 
-  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20px">
-    <div class="steps" style="flex:1">
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:nowrap;margin-bottom:20px;overflow:hidden">
+    <div class="steps" style="flex:1;min-width:0">
       <button class="step-btn active" onclick="goStep(1)" id="step1btn"><div class="step-num">1</div>Datos</button>
       <button class="step-btn" onclick="goStep(2)" id="step2btn"><div class="step-num">2</div>Columnas</button>
       <button class="step-btn" onclick="goStep(3)" id="step3btn"><div class="step-num">3</div>Ajustes</button>
@@ -488,15 +502,15 @@ pre.export-text{background:#F6F8FA;border-radius:var(--radius-sm);padding:14px;f
   <!-- PASO 4: GRUPOS + EDICIÓN -->
   <div class="panel" id="panel4">
     <!-- ENLACES PARA COMPARTIR -->
-    <div style="background:#0A0E14;border-radius:var(--radius);padding:16px 20px;margin-bottom:16px;display:flex;flex-wrap:wrap;gap:16px;align-items:center">
+    <div style="background:#0A0E14;border-radius:var(--radius);padding:14px 16px;margin-bottom:16px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;overflow:hidden">
       <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.85rem;color:#FFB800;white-space:nowrap">🔗 Enlaces para compartir:</div>
       <div style="display:flex;flex-wrap:wrap;gap:8px;flex:1">
-        <div style="display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.06);border-radius:8px;padding:7px 12px;flex:1;min-width:200px">
+        <div style="display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.06);border-radius:8px;padding:7px 10px;flex:1;min-width:0;overflow:hidden">
           <span style="font-size:.72rem;color:#aaa;white-space:nowrap">👨‍👩‍👧 Padres:</span>
           <span style="font-family:'DM Mono',monospace;font-size:.72rem;color:#fff;flex:1;overflow:hidden;text-overflow:ellipsis" id="link-padres">cargando...</span>
           <button onclick="copyLink('link-padres')" style="background:none;border:1px solid #555;color:#aaa;border-radius:5px;padding:3px 8px;cursor:pointer;font-size:.7rem;white-space:nowrap;font-family:'Instrument Sans',sans-serif" title="Copiar">📋</button>
         </div>
-        <div style="display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.06);border-radius:8px;padding:7px 12px;flex:1;min-width:200px">
+        <div style="display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.06);border-radius:8px;padding:7px 10px;flex:1;min-width:0;overflow:hidden">
           <span style="font-size:.72rem;color:#aaa;white-space:nowrap">🏃 Monitores:</span>
           <span style="font-family:'DM Mono',monospace;font-size:.72rem;color:#fff;flex:1;overflow:hidden;text-overflow:ellipsis" id="link-monitor">cargando...</span>
           <button onclick="copyLink('link-monitor')" style="background:none;border:1px solid #555;color:#aaa;border-radius:5px;padding:3px 8px;cursor:pointer;font-size:.7rem;white-space:nowrap;font-family:'Instrument Sans',sans-serif" title="Copiar">📋</button>
@@ -4200,7 +4214,7 @@ function showGlobalAttendance() {
   modal.innerHTML = '<div style="background:#fff;border-radius:16px;padding:28px;max-width:720px;width:100%;max-height:85vh;overflow-y:auto">' +
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">' +
     '<div style="font-weight:800;font-size:1.2rem">📊 Asistencia global hoy</div>' +
-    '<button onclick="(function(el){while(el.parentElement)el=el.parentElement;el.querySelector(\'div[style]\').remove();})(this)" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:#aaa">✕</button>' +
+    '<button onclick="closeModal(this)">✕</button>' +
     '</div>' +
     '<div id="globalAttList">Cargando...</div>' +
     '</div>';
@@ -4309,6 +4323,26 @@ const SESSION_KEY = 'campus_session';
 const SESSION_HOURS = 8; // session expires after 8 hours
 
 // ══════════════════════════════════════════════
+// MODAL CLOSE HELPER
+// ══════════════════════════════════════════════
+function closeModal(btn) {
+  // Walk up from button to find the fixed/modal overlay and remove it
+  var el = btn;
+  while (el) {
+    var s = el.style;
+    if (s && (s.position === 'fixed' || s.zIndex === '9999' || (s.cssText && s.cssText.includes('fixed')))) {
+      el.remove();
+      return;
+    }
+    el = el.parentElement;
+  }
+  // Fallback: remove closest div ancestor of the button
+  if (btn.parentElement && btn.parentElement.parentElement) {
+    btn.parentElement.parentElement.remove();
+  }
+}
+
+// ══════════════════════════════════════════════
 // ACCESS LOG
 // ══════════════════════════════════════════════
 function logAccessEntry(who, action) {
@@ -4335,7 +4369,7 @@ function showAccessLog() {
   modal.innerHTML = '<div style="background:#fff;border-radius:16px;padding:28px;max-width:600px;width:100%;max-height:80vh;overflow-y:auto">' +
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">' +
     '<div style="font-weight:800;font-size:1.1rem">🔐 Registro de accesos</div>' +
-    '<button onclick="(function(el){while(el.parentElement)el=el.parentElement;el.querySelector(\'div[style]\').remove();})(this)" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:#aaa">✕</button>' +
+    '<button onclick="closeModal(this)">✕</button>' +
     '</div><div id="accessLogList">Cargando...</div></div>';
   document.body.appendChild(modal);
 
