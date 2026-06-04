@@ -217,12 +217,46 @@ pre.export-text{background:#F6F8FA;border-radius:var(--radius-sm);padding:14px;f
 .no-data{text-align:center;padding:60px 20px;color:#C5CDD6}
 .no-data .ico{font-size:2.8rem;margin-bottom:12px}
 
+/* MOBILE BOTTOM NAV */
+.mobile-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #0A0E14;
+  border-top: 1px solid rgba(255,255,255,.1);
+  z-index: 1000;
+  padding: 6px 0 env(safe-area-inset-bottom, 6px);
+}
+.mobile-nav-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 4px;
+  background: none;
+  border: none;
+  color: rgba(255,255,255,.5);
+  font-size: .58rem;
+  cursor: pointer;
+  transition: color .2s;
+}
+.mobile-nav-btn.active { color: #FFB800; }
+.mobile-nav-btn span:first-child { font-size: 1.2rem; }
+
 @media(max-width:640px){
   .col-mapper{grid-template-columns:1fr}
   .grupos-grid{grid-template-columns:1fr}
   .app-logo span{display:none}
   .comedor-table{font-size:.75rem}
   .comedor-table th,.comedor-table td{padding:8px 10px}
+
+  /* Show mobile nav, hide desktop tabs */
+  .mobile-nav { display: flex !important; }
+  .header-tabs { display: none !important; }
+  body { padding-bottom: 70px; }
 
   /* MOBILE NAV */
   .app-header{height:52px;padding:0 12px}
@@ -290,6 +324,7 @@ pre.export-text{background:#F6F8FA;border-radius:var(--radius-sm);padding:14px;f
 
   </div>
   <div class="header-badge badge-admin" id="modeBadge" onclick="showChangePassword()" title="Cambiar contraseña" style="cursor:pointer">ADMIN 🔒</div>
+    <button onclick="showAccessLog()" title="Ver registro de accesos" style="background:none;border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:6px;padding:4px 10px;font-size:.7rem;cursor:pointer;margin-left:4px">📋 Accesos</button>
 </header>
 
 <!-- ══════════ VISTA ADMIN ══════════ -->
@@ -792,6 +827,24 @@ const COMEDOR_CODE='COMEDOR', ADMIN_CODE='ADMIN';
 // ══════════════════════════════════════════════
 // NAVEGACIÓN VISTAS
 // ══════════════════════════════════════════════
+function showViewMobile(v, btn) {
+  // Update mobile nav active state
+  document.querySelectorAll('.mobile-nav-btn').forEach(function(b){ b.classList.remove('active'); });
+  if(btn) btn.classList.add('active');
+  // Reuse showView but without event dependency
+  document.querySelectorAll('.view').forEach(function(el){ el.classList.remove('active'); });
+  document.querySelectorAll('.htab').forEach(function(el){ el.classList.remove('active'); });
+  var viewEl = document.getElementById('view-'+v);
+  if(viewEl) viewEl.classList.add('active');
+  var badges={admin:'ADMIN · badge-admin',monitor:'MONITOR · badge-monitor',comedor:'COMEDOR · badge-comedor',monitores:'MONITORES · badge-admin',qr:'QR · badge-admin',changelog:'CAMBIOS · badge-admin'};
+  var parts=(badges[v]||'ADMIN · badge-admin').split(' · ');
+  if(v==='monitores') { loadMonitoresData(); setTimeout(renderMonitoresList,300); }
+  if(v==='qr') { setTimeout(renderQRCodes, 100); }
+  if(v==='changelog') { loadChangelog(); }
+  var b=document.getElementById('modeBadge');
+  if(b) { b.textContent=parts[0]; b.className='header-badge '+parts[1]; }
+}
+
 function showView(v){
   document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
   document.querySelectorAll('.htab').forEach(el=>el.classList.remove('active'));
@@ -1478,6 +1531,7 @@ function enterPin(){
   var wi = getWeekIdxForDay(currentDateOffset);
   var weekGroup = getMonitorGroupForWeek(pin, wi);
   monitorGroup = weekGroup || found;
+  logAccessEntry(pin, 'monitor');
   document.getElementById('pinScreen').style.display='none';
   document.getElementById('attendScreen').style.display='block';
   const ages=monitorGroup.kids.map(k=>k.edad).filter(Boolean);
@@ -3643,27 +3697,42 @@ function showGlobalAttendance() {
   modal.innerHTML = '<div style="background:#fff;border-radius:16px;padding:28px;max-width:720px;width:100%;max-height:85vh;overflow-y:auto">' +
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">' +
     '<div style="font-weight:800;font-size:1.2rem">📊 Asistencia global hoy</div>' +
-    '<button onclick="this.closest(\'[style*=fixed]\').remove()" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:#aaa">✕</button>' +
+    '<button onclick="this.closest('div[style*=\"position:fixed\"]').remove()" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:#aaa">✕</button>' +
     '</div>' +
     '<div id="globalAttList">Cargando...</div>' +
     '</div>';
   document.body.appendChild(modal);
 
-  // Get today's date key
   var today = new Date();
   var dateStr = today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
 
-  // Fetch all attendance docs for today
+  // Build a map from monitor code -> {semana, gi} using asignaciones
+  var monRaw = null;
+  try { var ms=localStorage.getItem('campusMonitores'); if(ms) monRaw=JSON.parse(ms); } catch(e) {}
+  if(!monRaw && window._monitores) monRaw = {monitores:window._monitores, asignaciones:window._asignaciones||{}};
+  var monCodeToGroup = {}; // monCode -> {semana, gi, nombre}
+  if(monRaw && monRaw.asignaciones) {
+    Object.keys(monRaw.asignaciones).forEach(function(semana) {
+      Object.entries(monRaw.asignaciones[semana]).forEach(function(entry) {
+        var gi=entry[0], code=entry[1];
+        if(code) {
+          var mon = monRaw.monitores ? monRaw.monitores.find(function(m){return m.codigo===code;}) : null;
+          monCodeToGroup[code] = {semana:semana, gi:parseInt(gi), nombre:mon?mon.nombre:code};
+        }
+      });
+    });
+  }
+
   window._fbDB.collection('attendance').get().then(function(snap) {
-    var results = {};
+    var results = {}; // code -> {present, absent}
     snap.forEach(function(doc) {
       if(doc.id.endsWith('_'+dateStr)) {
         var code = doc.id.replace('att_','').replace('_'+dateStr,'');
         try {
           var data = JSON.parse(doc.data().data||'{}');
-          var present = Object.values(data).filter(function(v){return v==='P';}).length;
-          var absent = Object.values(data).filter(function(v){return v==='A';}).length;
-          results[code] = {present:present, absent:absent, total:present+absent};
+          var present = Object.values(data).filter(function(v){return v==='present'||v==='P';}).length;
+          var absent = Object.values(data).filter(function(v){return v==='absent'||v==='A';}).length;
+          results[code] = {present:present, absent:absent};
         } catch(e) {}
       }
     });
@@ -3671,34 +3740,54 @@ function showGlobalAttendance() {
     var el = document.getElementById('globalAttList');
     if(!el) return;
 
-    // Match with grupos
+    // Build group list — combine auto codes + monitor codes
     var allGroups = [];
-    Object.keys(grupos).forEach(function(semana) {
-      grupos[semana].forEach(function(grupo, gi) {
+    // Get current week
+    var todayIdx = getCurrentDayIdx();
+    var todayWi = getWeekIdxForDay(todayIdx);
+    var todaySemana = CAMPUS_WEEKS[todayWi] ? CAMPUS_WEEKS[todayWi].label : null;
+
+    if(todaySemana && grupos[todaySemana]) {
+      grupos[todaySemana].forEach(function(grupo, gi) {
         var name = getGroupName(gi);
-        var code = makeCode(semana, gi);
-        var att = results[code] || null;
-        allGroups.push({semana:semana, name:name, code:code, size:grupo.length, att:att});
+        var autoCode = makeCode(todaySemana, gi);
+        // Find monitor assigned to this group
+        var monCode = null, monNombre = null;
+        if(monRaw && monRaw.asignaciones && monRaw.asignaciones[todaySemana]) {
+          monCode = monRaw.asignaciones[todaySemana][gi] || null;
+          if(monCode && monRaw.monitores) {
+            var mon = monRaw.monitores.find(function(m){return m.codigo===monCode;});
+            monNombre = mon ? mon.nombre : monCode;
+          }
+        }
+        // Check both codes for attendance
+        var att = results[monCode] || results[autoCode] || null;
+        allGroups.push({semana:todaySemana, name:name, code:autoCode, monCode:monCode, monNombre:monNombre, size:grupo.length, att:att});
       });
-    });
+    }
 
     if(!allGroups.length) {
-      el.innerHTML = '<p style="text-align:center;color:var(--muted)">No hay grupos cargados.</p>';
+      el.innerHTML = '<p style="text-align:center;color:var(--muted)">No hay grupos para la semana actual.</p>';
       return;
     }
 
     var hasAtt = allGroups.filter(function(g){return g.att;}).length;
-    var html = '<div style="font-size:.8rem;color:var(--muted);margin-bottom:12px">' + hasAtt + ' de ' + allGroups.length + ' grupos han pasado lista hoy</div>';
+    var html = '<div style="font-size:.8rem;color:var(--muted);margin-bottom:12px">' +
+      (todaySemana||'Hoy') + ' · ' + hasAtt + ' de ' + allGroups.length + ' grupos han pasado lista</div>';
     html += '<div style="display:flex;flex-direction:column;gap:6px">';
     allGroups.forEach(function(g) {
-      var pct = g.att ? Math.round(g.att.present/Math.max(g.att.total,1)*100) : 0;
+      var total = g.att ? g.att.present+g.att.absent : 0;
+      var pct = total ? Math.round(g.att.present/total*100) : 0;
       var statusColor = !g.att ? '#ddd' : pct>=80 ? 'var(--grass)' : pct>=50 ? 'var(--sun)' : 'var(--coral)';
-      var statusText = !g.att ? '⏳ Sin lista' : '✅ Lista pasada';
-      html += '<div style="display:flex;align-items:center;gap:10px;background:#f8f9fa;border-radius:8px;padding:8px 12px">' +
+      html += '<div style="display:flex;align-items:center;gap:10px;background:#f8f9fa;border-radius:8px;padding:10px 14px">' +
         '<div style="width:10px;height:10px;border-radius:50%;background:' + statusColor + ';flex-shrink:0"></div>' +
-        '<div style="flex:1;font-size:.82rem"><strong>' + g.name + '</strong> <span style="color:var(--muted);font-size:.75rem">(' + g.semana + ')</span></div>' +
-        (g.att ? '<div style="font-size:.78rem;color:var(--grass)">' + g.att.present + '✅</div><div style="font-size:.78rem;color:var(--coral)">' + g.att.absent + '❌</div>' : '') +
-        '<div style="font-size:.75rem;color:var(--muted)">' + statusText + '</div>' +
+        '<div style="flex:1">' +
+          '<div style="font-size:.84rem;font-weight:600">' + g.name + '</div>' +
+          (g.monNombre ? '<div style="font-size:.72rem;color:var(--muted)">Monitor: ' + g.monNombre + '</div>' : '') +
+        '</div>' +
+        (g.att ? '<div style="font-size:.8rem;color:var(--grass);font-weight:600">' + g.att.present + '✅</div>' +
+                 '<div style="font-size:.8rem;color:var(--coral);font-weight:600">' + g.att.absent + '❌</div>' : '') +
+        '<div style="font-size:.75rem;color:' + (g.att?'var(--grass)':'var(--muted)') + '">' + (g.att?'✅ Lista pasada':'⏳ Sin lista') + '</div>' +
         '</div>';
     });
     html += '</div>';
@@ -3715,6 +3804,75 @@ function showGlobalAttendance() {
 // ══════════════════════════════════════════════
 const SESSION_KEY = 'campus_session';
 const SESSION_HOURS = 8; // session expires after 8 hours
+
+// ══════════════════════════════════════════════
+// ACCESS LOG
+// ══════════════════════════════════════════════
+function logAccessEntry(who, action) {
+  var entry = {ts: Date.now(), who: who, action: action};
+  var logs = [];
+  try { logs = JSON.parse(localStorage.getItem('campusAccessLog')||'[]'); } catch(e) {}
+  logs.unshift(entry);
+  if(logs.length > 500) logs = logs.slice(0,500);
+  try { localStorage.setItem('campusAccessLog', JSON.stringify(logs)); } catch(e) {}
+  if(window._fbDB) {
+    window._fbDB.collection('campus').doc('accessLog').get().then(function(snap) {
+      var existing = [];
+      if(snap.exists) { try { existing = JSON.parse(snap.data().data||'[]'); } catch(e) {} }
+      existing.unshift(entry);
+      if(existing.length > 500) existing = existing.slice(0,500);
+      window._fbDB.collection('campus').doc('accessLog').set({data: JSON.stringify(existing), updated: new Date()}).catch(function(){});
+    }).catch(function(){});
+  }
+}
+
+function showAccessLog() {
+  var modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  modal.innerHTML = '<div style="background:#fff;border-radius:16px;padding:28px;max-width:600px;width:100%;max-height:80vh;overflow-y:auto">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">' +
+    '<div style="font-weight:800;font-size:1.1rem">🔐 Registro de accesos</div>' +
+    '<button onclick="this.closest('div[style*=\"position:fixed\"]').remove()" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:#aaa">✕</button>' +
+    '</div><div id="accessLogList">Cargando...</div></div>';
+  document.body.appendChild(modal);
+
+  function renderLog(logs) {
+    var el = document.getElementById('accessLogList');
+    if(!el) return;
+    if(!logs.length) { el.innerHTML = '<p style="text-align:center;color:#aaa">Sin registros todavía.</p>'; return; }
+    var icons = {'login':'✅','login-offline':'📵','failed':'❌','monitor':'🏃'};
+    var labels = {'login':'Acceso admin','login-offline':'Acceso admin (sin internet)','failed':'Intento fallido','monitor':'Acceso monitor'};
+    el.innerHTML = logs.map(function(e) {
+      var d = new Date(e.ts);
+      var ds = d.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'2-digit'})+' '+d.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+      var icon = icons[e.action]||'📝';
+      var label = labels[e.action]||e.action;
+      var color = e.action==='failed'?'#ff4444':e.action==='login'?'#00C46A':'#888';
+      return '<div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f0">' +
+        '<span style="font-size:1rem">' + icon + '</span>' +
+        '<div style="flex:1"><div style="font-size:.82rem;font-weight:600;color:' + color + '">' + label + '</div>' +
+        '<div style="font-size:.75rem;color:#aaa">' + e.who + '</div></div>' +
+        '<div style="font-size:.75rem;color:#aaa">' + ds + '</div></div>';
+    }).join('');
+  }
+
+  // Try Firebase first
+  if(window._fbDB) {
+    window._fbDB.collection('campus').doc('accessLog').get().then(function(snap) {
+      var logs = [];
+      if(snap.exists) { try { logs = JSON.parse(snap.data().data||'[]'); } catch(e) {} }
+      renderLog(logs);
+    }).catch(function() {
+      var logs = [];
+      try { logs = JSON.parse(localStorage.getItem('campusAccessLog')||'[]'); } catch(e) {}
+      renderLog(logs);
+    });
+  } else {
+    var logs = [];
+    try { logs = JSON.parse(localStorage.getItem('campusAccessLog')||'[]'); } catch(e) {}
+    renderLog(logs);
+  }
+}
 
 function checkLogin() {
   const pwd = document.getElementById('loginPassword').value.trim();
@@ -3738,8 +3896,10 @@ function checkLogin() {
             hours: SESSION_HOURS
           }));
         } catch(e) {}
+        logAccessEntry('Admin', 'login');
         hideLogin();
       } else {
+        logAccessEntry('Admin', 'failed');
         document.getElementById('loginError').style.display='block';
         document.getElementById('loginPassword').value='';
         document.getElementById('loginPassword').focus();
@@ -3748,6 +3908,7 @@ function checkLogin() {
       // Firebase unavailable — use default password
       if(pwd === 'CAMPUS2025') {
         localStorage.setItem(SESSION_KEY, JSON.stringify({ts: Date.now(), hours: SESSION_HOURS}));
+        logAccessEntry('Admin', 'login-offline');
         hideLogin();
       } else {
         document.getElementById('loginError').style.display='block';
@@ -3839,6 +4000,25 @@ document.addEventListener('DOMContentLoaded', function() {
     <div style="margin-top:16px;font-size:.72rem;color:#ccc">Ítaka DYR · Apolana · Campus 2025</div>
   </div>
 </div>
+
+<!-- MOBILE BOTTOM NAV -->
+<nav class="mobile-nav" id="mobileNav">
+  <button class="mobile-nav-btn active" id="mbn-admin" onclick="showViewMobile('admin',this)">
+    <span>⚙️</span><span>Admin</span>
+  </button>
+  <button class="mobile-nav-btn" id="mbn-monitor" onclick="showViewMobile('monitor',this)">
+    <span>🏃</span><span>Monitor</span>
+  </button>
+  <button class="mobile-nav-btn" id="mbn-comedor" onclick="showViewMobile('comedor',this)">
+    <span>🍽️</span><span>Comedor</span>
+  </button>
+  <button class="mobile-nav-btn" id="mbn-monitores" onclick="showViewMobile('monitores',this)">
+    <span>👥</span><span>Monitores</span>
+  </button>
+  <button class="mobile-nav-btn" id="mbn-qr" onclick="showViewMobile('qr',this)">
+    <span>📲</span><span>QR</span>
+  </button>
+</nav>
 
 <!-- ══════════ VISTA QR ══════════ -->
 <div class="view" id="view-qr">
