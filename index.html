@@ -217,6 +217,12 @@ pre.export-text{background:#F6F8FA;border-radius:var(--radius-sm);padding:14px;f
 .no-data{text-align:center;padding:60px 20px;color:#C5CDD6}
 .no-data .ico{font-size:2.8rem;margin-bottom:12px}
 
+/* DESKTOP: action buttons as flex row */
+@media(min-width:641px){
+  #actionBtns{display:flex !important;flex-wrap:wrap}
+  #actionBtns .btn{font-size:.85rem;padding:8px 14px}
+}
+
 /* MOBILE BOTTOM NAV */
 .mobile-nav {
   display: none;
@@ -307,13 +313,22 @@ pre.export-text{background:#F6F8FA;border-radius:var(--radius-sm);padding:14px;f
   /* SEARCH */
   #kidSearchInput{font-size:.8rem}
 
-  /* STEPS — force horizontal scroll */
-  .steps{overflow-x:auto;flex-wrap:nowrap !important;padding-bottom:6px}
-  .step-btn{flex-shrink:0;white-space:nowrap}
+  /* STEPS — compact horizontal scroll */
+  .steps{overflow-x:auto;flex-wrap:nowrap !important;padding-bottom:6px;-webkit-overflow-scrolling:touch}
+  .step-btn{flex-shrink:0;white-space:nowrap;padding:6px 10px;font-size:.72rem}
+  .step-btn .step-num{width:14px;height:14px;font-size:.55rem}
 
-  /* LINKS BAR — stack each link on its own line */
-  #panel4 > div:first-child > div:last-child{flex-direction:column}
-  #panel4 > div:first-child > div:last-child > div{min-width:0 !important;width:100%}
+  /* STEPS + SEARCH — stack vertically on mobile */
+  #stepsSearchWrap{flex-wrap:wrap !important;gap:8px}
+  #stepsSearchWrap .steps{width:100%;flex:none}
+  #stepsSearchWrap > div:last-child{width:100%;max-width:100% !important;min-width:0 !important;flex:none}
+
+  /* LINKS BAR — stack each link on its own line, hide copy button text */
+  #panel4 > div:first-child > div:last-child{flex-direction:column;gap:6px}
+  #panel4 > div:first-child > div:last-child > div{min-width:0 !important;width:100%;box-sizing:border-box}
+
+  /* ACTION BUTTONS — keep 2-col grid, smaller text */
+  #actionBtns .btn{font-size:.74rem;padding:7px 8px}
 
   /* LINKS BAR */
   .comedor-wrap{padding:0}
@@ -354,7 +369,7 @@ pre.export-text{background:#F6F8FA;border-radius:var(--radius-sm);padding:14px;f
     <button class="btn btn-outline btn-sm" onclick="document.getElementById('savedGroupsBanner').style.display='none'">Ignorar</button>
   </div>
 
-  <div style="display:flex;align-items:center;gap:10px;flex-wrap:nowrap;margin-bottom:20px;overflow:hidden">
+  <div id="stepsSearchWrap" style="display:flex;align-items:center;gap:10px;flex-wrap:nowrap;margin-bottom:20px;overflow:hidden">
     <div class="steps" style="flex:1;min-width:0">
       <button class="step-btn active" onclick="goStep(1)" id="step1btn"><div class="step-num">1</div>Datos</button>
       <button class="step-btn" onclick="goStep(2)" id="step2btn"><div class="step-num">2</div>Columnas</button>
@@ -1245,18 +1260,18 @@ function renderResults(){
     <div class="stat"><div class="stat-num">${comedorCount}</div><div class="stat-label">Comedor</div></div>
   </div>
   <div class="alert alert-info">✅ Grupos generados con nombres de color. <strong>Códigos de monitor</strong> en cada tarjeta. Activa "Editar grupos" para mover niños manualmente.</div>
-  <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+  <div id="actionBtns" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
     <button class="btn btn-outline" onclick="goStep(3)">← Volver</button>
     <button class="btn btn-primary" id="editToggleBtn" onclick="toggleEdit()">✏️ Editar grupos</button>
-    <button class="btn btn-success" onclick="exportResults()">📋 Copiar para Sheets</button>
-    <button class="btn btn-warn" onclick="exportWeeklyLists()">📥 Listas por semana (.xlsx)</button>
-    <button class="btn btn-outline" onclick="exportCSV()">⬇️ Descargar TSV</button>
-    <button class="btn btn-outline" onclick="exportCodes()">🔑 Ver códigos</button>
-    <button class="btn btn-outline" onclick="showAttendanceHistory()">📅 Ver asistencia</button>
-    <button class="btn btn-outline" onclick="showGlobalAttendance()">🌐 Asistencia global</button>
-    <button class="btn btn-outline btn-sm" onclick="backupGrupos('backup-campus')" title="Descargar backup de todos los grupos">💾 Backup</button>
-    <button class="btn btn-success btn-sm" onclick="saveGruposManual()" id="saveFirebaseBtn" title="Guardar grupos en Firebase ahora">🔥 Guardar en Firebase</button>
-    <button class="btn btn-danger btn-sm" onclick="resetGroups()" style="margin-left:auto" title="Reiniciar todos los grupos">🗑️ Reiniciar</button>
+    <button class="btn btn-success" onclick="exportResults()">📋 Copiar Sheets</button>
+    <button class="btn btn-warn" onclick="exportWeeklyLists()">📥 Listas .xlsx</button>
+    <button class="btn btn-outline" onclick="exportCSV()">⬇️ TSV</button>
+    <button class="btn btn-outline" onclick="exportCodes()">🔑 Códigos</button>
+    <button class="btn btn-outline" onclick="showAttendanceHistory()">📅 Asistencia</button>
+    <button class="btn btn-outline" onclick="showGlobalAttendance()">🌐 Global</button>
+    <button class="btn btn-outline" onclick="backupGrupos('backup-campus')">💾 Backup</button>
+    <button class="btn btn-success" onclick="saveGruposManual()" id="saveFirebaseBtn">🔥 Firebase</button>
+    <button class="btn btn-danger" onclick="resetGroups()" style="grid-column:1/-1">🗑️ Reiniciar</button>
   </div>
   <div id="editToolbar" class="edit-toolbar" style="display:none">
     <p>✏️ <strong>Modo edición activo</strong> — Arrastra los niños entre grupos para reorganizarlos. Los cambios se guardan automáticamente.</p>
