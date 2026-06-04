@@ -277,11 +277,11 @@ pre.export-text{background:#F6F8FA;border-radius:var(--radius-sm);padding:14px;f
   .step-num{width:16px;height:16px;font-size:.58rem}
 
   /* STATS — all in one scrollable row */
-  .stats-bar{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:8px;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-bottom:4px}
-  .stats-bar::-webkit-scrollbar{display:none}
-  .stat{min-width:80px;flex-shrink:0;padding:10px 10px;text-align:center}
-  .stat-num{font-size:1.4rem}
-  .stat-label{font-size:.58rem}
+  /* STATS — 3-col grid, all visible */
+  .stats-bar{display:grid !important;grid-template-columns:repeat(3,1fr);gap:8px;overflow:visible !important}
+  .stat{min-width:0;padding:10px 8px;text-align:center;flex-shrink:unset}
+  .stat-num{font-size:1.3rem}
+  .stat-label{font-size:.56rem}
 
   /* BUTTONS — wrap nicely */
   .btn{padding:8px 11px;font-size:.78rem}
@@ -4110,7 +4110,7 @@ function renderStats() {
     return;
   }
 
-  // Collect all kids (unique by name)
+  // Collect all kids — unique by "Nombre alumno/a" + "Apellidos alumno/a"
   var allKids = [];
   var kidsBySemana = {};
   var seenIds = new Set();
@@ -4119,26 +4119,27 @@ function renderStats() {
     grupos[s].forEach(function(g) {
       g.forEach(function(k) {
         kidsBySemana[s].push(k);
-        var uid = k.id || (k.nombre+'_'+k.n2+'_'+k.apellidos);
+        // Use full name as unique key
+        var nombre = (k['Nombre alumno/a']||k.nombre||k.n1||'').trim().toLowerCase();
+        var apellidos = (k['Apellidos alumno/a']||k.apellidos||'').trim().toLowerCase();
+        var uid = nombre + '___' + apellidos;
         if(!seenIds.has(uid)) { seenIds.add(uid); allKids.push(k); }
       });
     });
   });
 
   var total = allKids.length;
-  var chicos = allKids.filter(function(k){ return k.genero==='M'||k.sexo==='M'||k.genero==='Masculino'; }).length;
-  var chicas = allKids.filter(function(k){ return k.genero==='F'||k.sexo==='F'||k.genero==='Femenino'; }).length;
+  // Sexo field
+  var chicos = allKids.filter(function(k){
+    var s = (k['Sexo']||k.sexo||k.genero||k.género||'').toString().trim().toUpperCase();
+    return s==='M'||s==='MASCULINO'||s==='HOMBRE'||s==='H';
+  }).length;
+  var chicas = allKids.filter(function(k){
+    var s = (k['Sexo']||k.sexo||k.genero||k.género||'').toString().trim().toUpperCase();
+    return s==='F'||s==='FEMENINO'||s==='MUJER'||s==='V';
+  }).length;
   var conComedor = allKids.filter(function(k){ return k.comedor; }).length;
   var sinComedor = total - conComedor;
-
-  // Hermanos (kids sharing apellidos)
-  var apellidoMap = {};
-  allKids.forEach(function(k) {
-    var ap = (k.apellidos||k.ap1||'').trim().split(' ')[0];
-    if(ap) { apellidoMap[ap] = (apellidoMap[ap]||0)+1; }
-  });
-  var hermanos = Object.values(apellidoMap).filter(function(n){ return n>1; }).reduce(function(a,b){ return a+b; }, 0);
-  var familias = Object.values(apellidoMap).filter(function(n){ return n>1; }).length;
 
   // Age distribution
   var byYear = {};
@@ -4221,15 +4222,7 @@ function renderStats() {
     el.appendChild(card('🎂 Por año de nacimiento', ageHtml));
   }
 
-  // TOP FAMILIES (hermanos)
-  var topFamilias = Object.entries(apellidoMap).filter(function(e){ return e[1]>1; })
-    .sort(function(a,b){ return b[1]-a[1]; }).slice(0,10);
-  if(topFamilias.length) {
-    var famHtml = topFamilias.map(function(e){
-      return statRow(e[0], e[1]+' hermanos/as');
-    }).join('');
-    el.appendChild(card('👨‍👩‍👧‍👦 Familias con varios hijos', famHtml));
-  }
+
 
   // GROUPS SIZE distribution
   var groupSizes = {};
