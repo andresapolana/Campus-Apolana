@@ -545,6 +545,7 @@ pre.export-text{background:#F6F8FA;border-radius:var(--radius-sm);padding:14px;f
         <button onclick="changeDay(1)">▶</button>
       </div>
       <div id="weekJumps" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px"></div>
+      <div id="monHorarioHoy" style="display:none"></div>
       <div class="attend-summary">
         <div class="attend-pill pill-p">✅ <span id="countPresent">0</span> presentes</div>
         <div class="attend-pill pill-a">❌ <span id="countAbsent">0</span> ausentes</div>
@@ -679,13 +680,14 @@ pre.export-text{background:#F6F8FA;border-radius:var(--radius-sm);padding:14px;f
   <!-- TAB: HORARIOS -->
   <div id="mtab-horarios-panel" style="display:none">
     <div class="card" style="margin-bottom:16px">
-      <div class="card-title">🗓️ Editor de horario por grupo</div>
-      <div class="card-desc">Define el horario semanal de cada grupo. Los monitores lo verán en su pantalla.</div>
-      <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
-        <div class="field" style="min-width:200px">
+      <div class="card-title">🗓️ Editor de horario por color</div>
+      <div class="card-desc">Los horarios se definen por color (Rojo, Verde, Azul, Amarillo) y semana. Todos los grupos del mismo color comparten horario.</div>
+
+      <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;align-items:flex-end">
+        <div class="field" style="min-width:160px">
           <label>Semana</label>
           <select id="hor-semana" onchange="renderHorarioEditor()" style="margin-top:4px">
-            <option value="">— Selecciona semana —</option>
+            <option value="">— Semana —</option>
             <option value="Semana 1">Semana 1</option>
             <option value="Semana 2">Semana 2</option>
             <option value="Semana 3">Semana 3</option>
@@ -693,13 +695,27 @@ pre.export-text{background:#F6F8FA;border-radius:var(--radius-sm);padding:14px;f
             <option value="Semana 5">Semana 5</option>
           </select>
         </div>
-        <div class="field" style="min-width:200px">
-          <label>Grupo</label>
-          <select id="hor-grupo" onchange="renderHorarioEditor()" style="margin-top:4px">
-            <option value="">— Selecciona grupo —</option>
+        <div class="field" style="min-width:160px">
+          <label>Color de grupo</label>
+          <select id="hor-color" onchange="renderHorarioEditor()" style="margin-top:4px">
+            <option value="">— Color —</option>
+            <option value="Rojo">🔴 Rojo</option>
+            <option value="Verde">🟢 Verde</option>
+            <option value="Azul">🔵 Azul</option>
+            <option value="Amarillo">🟡 Amarillo</option>
+            <option value="Naranja">🟠 Naranja</option>
+            <option value="Morado">🟣 Morado</option>
           </select>
         </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-outline btn-sm" onclick="downloadHorarioTemplate()">⬇️ Plantilla Excel</button>
+          <label class="btn btn-outline btn-sm" style="cursor:pointer;margin:0">
+            📥 Importar Excel
+            <input type="file" accept=".xlsx,.xls" onchange="importHorarioExcel(this)" style="display:none">
+          </label>
+        </div>
       </div>
+
       <div id="horario-editor-area"></div>
     </div>
   </div>
@@ -1558,6 +1574,40 @@ async function renderAttendList(){
   document.getElementById('dateLabel').textContent=label;
   document.getElementById('dayBadge').textContent=badge;
   const color=COLORS[monitorGroup.groupIdx%COLORS.length];
+
+  // Show today's horario
+  var horarioEl = document.getElementById('monHorarioHoy');
+  if(horarioEl) {
+    var grpName = getGroupName(monitorGroup.groupIdx);
+    var grpColor = getColorFromGroupName(grpName);
+    var hkey = grpColor ? getHorarioKey(monitorGroup.turno, grpColor) : null;
+    var horario = hkey ? (_horarios[hkey]||null) : null;
+    var all = getAllCampusDays();
+    var dayDate = all[Math.max(0,Math.min(currentDateOffset,all.length-1))];
+    var dayName = dayDate ? ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'][dayDate.getDay()] : '';
+    if(horario && dayName && ['Lunes','Martes','Miércoles','Jueves','Viernes'].indexOf(dayName)>=0) {
+      var rows = horario.filter(function(r){ return r.dias && r.dias[dayName]; });
+      if(rows.length) {
+        horarioEl.innerHTML = '<div style="margin-bottom:12px;background:#f8f9fa;border-radius:10px;padding:12px 14px">' +
+          '<div style="font-weight:700;font-size:.82rem;color:#555;margin-bottom:8px">📅 Horario de hoy · '+dayName+'</div>' +
+          rows.map(function(r){
+            var parts = (r.dias[dayName]||'').split('|');
+            var act=parts[0]||''; var lugar=parts[1]||'';
+            return '<div style="display:flex;gap:8px;align-items:baseline;padding:4px 0;border-bottom:1px solid #eee;font-size:.8rem">' +
+              '<span style="font-family:'DM Mono',monospace;color:#888;font-size:.72rem;flex-shrink:0;min-width:90px">'+r.franja+'</span>' +
+              '<span style="font-weight:600">'+act+'</span>' +
+              (lugar ? '<span style="color:#aaa;font-size:.72rem">· '+lugar+'</span>' : '') +
+              '</div>';
+          }).join('') + '</div>';
+        horarioEl.style.display='block';
+      } else {
+        horarioEl.style.display='none';
+      }
+    } else {
+      horarioEl.style.display='none';
+    }
+  }
+
   const list=document.getElementById('attendList');list.innerHTML='';
   monitorGroup.kids.forEach(kid=>{
     const name=fullName(kid);
@@ -2954,63 +3004,79 @@ const DIAS = ['Lunes','Martes','Miércoles','Jueves','Viernes'];
 const DEFAULT_FRANJAS = ['08:00–09:00','09:00–09:30','09:30–10:30','10:30–11:00','11:00–12:30','12:30–14:00','14:00–15:00','15:00–16:30','16:30–17:00'];
 
 function populateHorGrupo() {
-  const sel = document.getElementById('hor-grupo');
-  const semana = document.getElementById('hor-semana').value;
-  sel.innerHTML = '<option value="">— Selecciona grupo —</option>';
-  if(semana && grupos[semana]) {
-    grupos[semana].forEach((_,gi) => {
-      const o = document.createElement('option');
-      o.value = gi; o.textContent = getGroupName(gi);
-      sel.appendChild(o);
-    });
-  }
   renderHorarioEditor();
 }
 
-function getHorarioKey(semana, gi) { return semana+'__'+gi; }
+function getHorarioKey(semana, color) { return 'color__'+semana+'__'+(color||''); }
+function getColorFromGroupName(name) {
+  var colors = ['Rojo','Verde','Azul','Amarillo','Naranja','Morado'];
+  for(var i=0;i<colors.length;i++) { if(name && name.toLowerCase().startsWith(colors[i].toLowerCase())) return colors[i]; }
+  return null;
+}
+function getHorarioForGroup(semana, gi) {
+  var name = getGroupName(gi);
+  var color = getColorFromGroupName(name);
+  if(!color) return null;
+  return _horarios[getHorarioKey(semana, color)] || null;
+}
 
 function renderHorarioEditor() {
   const semana = document.getElementById('hor-semana').value;
-  const gi = document.getElementById('hor-grupo').value;
+  const color = document.getElementById('hor-color') ? document.getElementById('hor-color').value : '';
   const area = document.getElementById('horario-editor-area');
-  if(!semana || gi==='') { area.innerHTML = ''; return; }
+  if(!semana || !color) { area.innerHTML = '<p style="color:var(--muted);font-size:.85rem;padding:12px 0">Selecciona semana y color para editar el horario.</p>'; return; }
 
-  const key = getHorarioKey(semana, gi);
+  const key = getHorarioKey(semana, color);
   const horario = _horarios[key] || DEFAULT_FRANJAS.map(f => ({franja:f, dias:{}}));
+  const colorMap = {Rojo:'#E53935',Verde:'#43A047',Azul:'#1E88E5',Amarillo:'#F9A825',Naranja:'#FB8C00',Morado:'#8E24AA'};
+  const colorHex = colorMap[color] || '#333';
 
   area.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <div style="width:14px;height:14px;border-radius:50%;background:${colorHex}"></div>
+      <span style="font-weight:700;font-size:.95rem">${color} · ${semana}</span>
+      <span style="font-size:.78rem;color:var(--muted)">— este horario aplica a todos los grupos ${color}</span>
+    </div>
     <div style="overflow-x:auto;margin-bottom:14px">
-      <table style="width:100%;border-collapse:collapse;font-size:.82rem;min-width:600px">
+      <table style="width:100%;border-collapse:collapse;font-size:.82rem;min-width:650px">
         <thead>
           <tr style="background:var(--dark)">
-            <th style="padding:10px 12px;text-align:left;color:#FFB800;font-family:'Syne',sans-serif;width:130px">Horario</th>
-            ${DIAS.map(d=>`<th style="padding:10px 8px;color:#aaa;text-align:center">${d}</th>`).join('')}
-            <th style="width:40px"></th>
+            <th style="padding:10px 12px;text-align:left;color:#FFB800;font-family:'Syne',sans-serif;width:140px">Franja horaria</th>
+            ${DIAS.map(d=>`<th style="padding:10px 8px;color:#aaa;text-align:center;min-width:130px">${d}</th>`).join('')}
+            <th style="width:36px"></th>
           </tr>
         </thead>
-        <tbody id="horario-tbody">
+        <tbody>
           ${horario.map((row,ri) => `
             <tr style="border-bottom:1px solid #F0F2F5">
               <td style="padding:8px 10px">
-                <input type="text" value="${row.franja}" onchange="_updateHorarioFranja('${key}',${ri},this.value)"
-                  style="width:100%;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:.78rem;font-family:'DM Mono',monospace">
+                <input type="text" value="${row.franja||''}" onchange="_updateHorarioFranja('${key}',${ri},this.value)"
+                  style="width:100%;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:.78rem;font-family:'DM Mono',monospace" placeholder="09:00-10:00">
               </td>
-              ${DIAS.map(d=>`
-                <td style="padding:6px 4px">
-                  <input type="text" value="${(row.dias&&row.dias[d])||''}" placeholder="actividad"
-                    onchange="_updateHorarioActividad('${key}',${ri},'${d}',this.value)"
-                    style="width:100%;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:.78rem;text-align:center">
-                </td>`).join('')}
-              <td style="padding:6px 4px;text-align:center">
-                <button onclick="_deleteHorarioRow('${key}',${ri})" style="background:none;border:none;cursor:pointer;color:#ccc;font-size:1rem">×</button>
+              ${DIAS.map(d=>{
+                const val = (row.dias&&row.dias[d])||'';
+                const parts = val.split('|');
+                const act = parts[0]||'';
+                const lugar = parts[1]||'';
+                return `<td style="padding:4px">
+                  <input type="text" value="${act}" placeholder="Actividad"
+                    onchange="_updateHorarioField('${key}',${ri},'${d}',this.value,this.nextElementSibling.value)"
+                    style="width:100%;border:1px solid var(--border);border-radius:5px 5px 0 0;padding:4px 7px;font-size:.76rem;border-bottom:none">
+                  <input type="text" value="${lugar}" placeholder="Lugar"
+                    onchange="_updateHorarioField('${key}',${ri},'${d}',this.previousElementSibling.value,this.value)"
+                    style="width:100%;border:1px solid var(--border);border-radius:0 0 5px 5px;padding:4px 7px;font-size:.72rem;color:#888">
+                </td>`;}).join('')}
+              <td style="padding:4px;text-align:center">
+                <button onclick="_deleteHorarioRow('${key}',${ri})" style="background:none;border:none;cursor:pointer;color:#ccc;font-size:1.1rem">×</button>
               </td>
             </tr>`).join('')}
         </tbody>
       </table>
     </div>
-    <div style="display:flex;gap:10px">
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
       <button class="btn btn-outline btn-sm" onclick="_addHorarioRow('${key}')">+ Añadir franja</button>
-      <button class="btn btn-success btn-sm" onclick="saveHorario('${key}')">💾 Guardar horario</button>
+      <button class="btn btn-success btn-sm" onclick="saveHorario('${key}')">💾 Guardar horario de ${color}</button>
+      <button class="btn btn-outline btn-sm" onclick="copyHorarioToOtherColors('${key}','${semana}','${color}')">📋 Copiar a otras semanas...</button>
     </div>`;
 }
 
@@ -3019,6 +3085,11 @@ function _getOrInitHorario(key) {
   return _horarios[key];
 }
 function _updateHorarioFranja(key,ri,val) { _getOrInitHorario(key)[ri].franja = val; }
+function _updateHorarioField(key,ri,dia,actividad,lugar) {
+  const h = _getOrInitHorario(key);
+  if(!h[ri].dias) h[ri].dias = {};
+  h[ri].dias[dia] = actividad + (lugar ? '|'+lugar : '');
+}
 function _updateHorarioActividad(key,ri,dia,val) {
   const h = _getOrInitHorario(key);
   if(!h[ri].dias) h[ri].dias = {};
@@ -3029,12 +3100,77 @@ function _deleteHorarioRow(key,ri) {
   renderHorarioEditor();
 }
 function _addHorarioRow(key) {
-  _getOrInitHorario(key).push({franja:'00:00–00:00', dias:{}});
+  _getOrInitHorario(key).push({franja:'', dias:{}});
   renderHorarioEditor();
 }
 function saveHorario(key) {
   saveMonitoresData();
   showToast('🗓️ Horario guardado ✅','success');
+  logChange('save', 'Horario guardado: ' + key.replace('color__','').replace('__',' · '));
+}
+function copyHorarioToOtherColors(key, semana, color) {
+  var targetSemana = prompt('¿A qué semana copiar este horario? (ej: Semana 2)');
+  if(!targetSemana) return;
+  var newKey = getHorarioKey(targetSemana, color);
+  _horarios[newKey] = JSON.parse(JSON.stringify(_horarios[key]||[]));
+  saveMonitoresData();
+  showToast('📋 Horario copiado a ' + targetSemana + ' ✅','success');
+}
+function downloadHorarioTemplate() {
+  var wb = XLSX.utils.book_new();
+  var dias = ['Lunes','Martes','Miércoles','Jueves','Viernes'];
+  var wsData = [
+    ['Franja horaria','Lunes - Actividad','Lunes - Lugar','Martes - Actividad','Martes - Lugar','Miércoles - Actividad','Miércoles - Lugar','Jueves - Actividad','Jueves - Lugar','Viernes - Actividad','Viernes - Lugar'],
+    ['09:00-09:50','Juegos presentación','Hipódromo','','','','','','','',''],
+    ['09:50-10:20','Almuerzo 1','Comedor','Almuerzo 1','Comedor','Almuerzo 1','Comedor','Almuerzo 1','Comedor','Almuerzo 1','Comedor'],
+    ['10:20-11:20','','','','','','','','','',''],
+    ['11:20-11:40','Vestuario','','Vestuario','','Vestuario','','Vestuario','','Vestuario',''],
+    ['11:40-12:10','Almuerzo 2','Comedor','Almuerzo 2','Comedor','Almuerzo 2','Comedor','Almuerzo 2','Comedor','Almuerzo 2','Comedor'],
+    ['12:10-13:00','','','','','','','','','',''],
+    ['13:00-13:45','','','','','','','','','',''],
+  ];
+  var ws = XLSX.utils.aoa_to_sheet(wsData);
+  ws['!cols'] = [{wch:16},{wch:22},{wch:16},{wch:22},{wch:16},{wch:22},{wch:16},{wch:22},{wch:16},{wch:22},{wch:16}];
+  XLSX.utils.book_append_sheet(wb, ws, 'Horario');
+  XLSX.writeFile(wb, 'plantilla-horario.xlsx');
+}
+function importHorarioExcel(input) {
+  var semana = document.getElementById('hor-semana').value;
+  var color = document.getElementById('hor-color') ? document.getElementById('hor-color').value : '';
+  if(!semana || !color) { showToast('⚠️ Selecciona semana y color primero','error'); input.value=''; return; }
+  var file = input.files[0];
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var wb = XLSX.read(e.target.result, {type:'array'});
+      var ws = wb.Sheets[wb.SheetNames[0]];
+      var data = XLSX.utils.sheet_to_json(ws, {header:1});
+      var dias = ['Lunes','Martes','Miércoles','Jueves','Viernes'];
+      var rows = [];
+      for(var i=1;i<data.length;i++) {
+        var row = data[i];
+        if(!row || !row[0]) continue;
+        var franja = row[0]||'';
+        var diasObj = {};
+        for(var d=0;d<5;d++) {
+          var act = row[1+d*2]||'';
+          var lugar = row[2+d*2]||'';
+          if(act||lugar) diasObj[dias[d]] = act + (lugar?'|'+lugar:'');
+        }
+        rows.push({franja:franja, dias:diasObj});
+      }
+      var key = getHorarioKey(semana, color);
+      _horarios[key] = rows;
+      saveMonitoresData();
+      renderHorarioEditor();
+      showToast('📥 Horario importado — '+rows.length+' franjas ✅','success');
+    } catch(err) {
+      showToast('❌ Error al leer el Excel: '+err.message,'error');
+    }
+    input.value = '';
+  };
+  reader.readAsArrayBuffer(file);
 }
 
 function copyLink(id) {
