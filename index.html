@@ -84,8 +84,8 @@ input:focus,select:focus{outline:none;border-color:var(--sky)}
 .ttab.active{background:var(--dark);color:#fff;border-color:var(--dark)}
 
 /* GRUPOS GRID */
-.grupos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
-.grupo-card{background:#fff;border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;box-shadow:var(--shadow);transition:box-shadow .2s}
+.grupos-grid{columns:3;column-gap:14px;display:block}
+.grupo-card{background:#fff;border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;box-shadow:var(--shadow);transition:box-shadow .2s;break-inside:avoid;margin-bottom:14px}
 .grupo-card:hover{box-shadow:0 6px 24px rgba(0,0,0,.1)}
 .grupo-card.drag-over{border:2px dashed var(--sky);background:#EEF4FF}
 .grupo-header{padding:13px 16px;display:flex;justify-content:space-between;align-items:center}
@@ -221,6 +221,10 @@ pre.export-text{background:#F6F8FA;border-radius:var(--radius-sm);padding:14px;f
 @media(min-width:641px){
   #actionBtns{display:flex !important;flex-wrap:wrap}
   #actionBtns .btn{font-size:.85rem;padding:8px 14px}
+  .turno-tabs{display:flex !important;flex-wrap:wrap !important;gap:6px !important}
+  .steps{display:flex !important;flex-wrap:wrap !important}
+  .turno-panel{display:block}
+  .grupos-grid{columns:3 !important;display:block !important}
 }
 
 /* MOBILE BOTTOM NAV */
@@ -258,7 +262,7 @@ pre.export-text{background:#F6F8FA;border-radius:var(--radius-sm);padding:14px;f
 
 @media(max-width:640px){
   .col-mapper{grid-template-columns:1fr}
-  .grupos-grid{grid-template-columns:1fr}
+  .grupos-grid{columns:1}
   .app-logo span{display:none}
   .comedor-table{font-size:.75rem}
   .comedor-table th,.comedor-table td{padding:8px 10px}
@@ -357,6 +361,7 @@ pre.export-text{background:#F6F8FA;border-radius:var(--radius-sm);padding:14px;f
     <button class="htab" onclick="showView('monitores')">👥 Monitores</button>
     <button class="htab" onclick="showView('stats')">📊 Stats</button>
     <button class="htab" onclick="showView('histasist')">📅 Historial</button>
+    <button class="htab" onclick="showView('incidencias')">📬 Incidencias</button>
     <button class="htab" onclick="showView('qr')">📲 QR</button>
     <button class="htab" onclick="showView('changelog')">📋 Cambios</button>
 
@@ -378,19 +383,19 @@ pre.export-text{background:#F6F8FA;border-radius:var(--radius-sm);padding:14px;f
     <button class="btn btn-outline btn-sm" onclick="document.getElementById('savedGroupsBanner').style.display='none'">Ignorar</button>
   </div>
 
-  <div id="stepsSearchWrap" style="display:flex;align-items:center;gap:10px;flex-wrap:nowrap;margin-bottom:20px;overflow:hidden">
+  <div id="stepsSearchWrap" style="display:flex;align-items:center;gap:10px;flex-wrap:nowrap;margin-bottom:20px;overflow:visible">
     <div class="steps" style="flex:1;min-width:0">
       <button class="step-btn active" onclick="goStep(1)" id="step1btn"><div class="step-num">1</div>Datos</button>
       <button class="step-btn" onclick="goStep(2)" id="step2btn"><div class="step-num">2</div>Columnas</button>
       <button class="step-btn" onclick="goStep(3)" id="step3btn"><div class="step-num">3</div>Ajustes</button>
       <button class="step-btn" onclick="goStep(4)" id="step4btn"><div class="step-num">4</div>Grupos</button>
     </div>
-    <div style="position:relative;min-width:220px;max-width:320px;flex:1">
+    <div style="position:relative;min-width:220px;max-width:320px;flex:1;z-index:9001">
       <input type="text" id="kidSearchInput" placeholder="🔍 Buscar niño..." 
         oninput="searchKidInGroups(this.value)"
         style="width:100%;padding:9px 14px;border:1.5px solid var(--border);border-radius:20px;font-family:'Instrument Sans',sans-serif;font-size:.82rem;outline:none;transition:border-color .2s;background:#fff"
         onfocus="this.style.borderColor='var(--sky)'" onblur="this.style.borderColor='var(--border)'">
-      <div id="kidSearchResults" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.1);z-index:100;max-height:280px;overflow-y:auto"></div>
+      <div id="kidSearchResults" style="display:none;position:fixed;top:0;left:0;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:99999;max-height:320px;overflow-y:auto;min-width:280px"></div>
     </div>
   </div>
 
@@ -526,7 +531,7 @@ pre.export-text{background:#F6F8FA;border-radius:var(--radius-sm);padding:14px;f
   <!-- PASO 4: GRUPOS + EDICIÓN -->
   <div class="panel" id="panel4">
     <!-- ENLACES PARA COMPARTIR -->
-    <div style="background:#0A0E14;border-radius:var(--radius);padding:14px 16px;margin-bottom:16px">
+    <div style="background:#0A0E14;border-radius:var(--radius);padding:14px 16px;margin-bottom:16px;position:relative;z-index:1">
       <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.85rem;color:#FFB800;margin-bottom:10px">🔗 Enlaces para compartir</div>
       <div style="display:flex;flex-direction:column;gap:8px">
         <div style="background:rgba(255,255,255,.06);border-radius:8px;padding:9px 12px">
@@ -926,6 +931,7 @@ function showViewMobile(v, btn) {
   if(v==='qr') { setTimeout(renderQRCodes, 100); }
   if(v==='stats') { setTimeout(renderStats, 100); }
   if(v==='histasist') { setTimeout(renderHistorialAsist, 100); }
+  if(v==='incidencias') { setTimeout(loadIncidencias, 100); }
   if(v==='changelog') { loadChangelog(); }
   var b=document.getElementById('modeBadge');
   if(b) { b.textContent=parts[0]; b.className='header-badge '+parts[1]; }
@@ -942,6 +948,7 @@ function showView(v){
   if(v==='qr') { setTimeout(renderQRCodes, 100); }
   if(v==='stats') { setTimeout(renderStats, 100); }
   if(v==='histasist') { setTimeout(renderHistorialAsist, 100); }
+  if(v==='incidencias') { setTimeout(loadIncidencias, 100); }
   if(v==='changelog') { loadChangelog(); }
   const b=document.getElementById('modeBadge');
   b.textContent=txt; b.className='header-badge '+cls;
@@ -1029,6 +1036,7 @@ function buildMapper(){
     {key:'comedor',   label:'🍽️ Comedor (Sí/No)',           hints:['comedor','almuerzo','lunch']},
     {key:'alergias',  label:'⚠️ Alergias',                  hints:['alergia','dieta','intoler','allerg']},
     {key:'sexo',         label:'⚧ Sexo / Género',             hints:['sexo','género','genero','sex','gender']},
+    {key:'talla',        label:'👕 Talla camiseta',           hints:['talla','camiseta','shirt','size','tallaje']},
     {key:'observaciones',label:'💬 Observaciones',          hints:['observa','comentar','amigo','nota']},
   ];
 
@@ -1112,6 +1120,7 @@ function generateGroups(){
     nombre:row[mapping.nombre]||'(sin nombre)',
     apellidos:mapping.apellidos?row[mapping.apellidos]:'',
     sexo:mapping.sexo?String(row[mapping.sexo]||'').trim():'',
+    talla:mapping.talla?String(row[mapping.talla]||'').trim():'',
     edad:extractAge(row[mapping.edad])||extractAge(row[mapping.fechaNac]),
     anoNac:extractYear(row[mapping.fechaNac])||extractYear(row[mapping.edad]),
     semanas:['s1','s2','s3','s4','s5'].filter(s=>mapping[s]&&isComedor(row[mapping[s]])),
@@ -1304,6 +1313,12 @@ function renderResults(){
     <button class="btn btn-outline" onclick="showGlobalAttendance()">🌐 Global</button>
     <button class="btn btn-outline" onclick="editAviso()">📢 Aviso del día</button>
     <button class="btn btn-outline" onclick="exportGroupsPDF()">📄 PDF grupos</button>
+    <button class="btn btn-outline" onclick="exportTallas()">👕 Tallas</button>
+    <label class="btn btn-outline" style="cursor:pointer;margin:0">
+      📊 Enriquecer datos
+      <input type="file" accept=".xlsx,.xls" onchange="enrichKidsData(this)" style="display:none">
+    </label>
+    <button class="btn btn-outline" onclick="exportInformeAsistencia()">📊 Informe final</button>
     <button class="btn btn-outline" onclick="backupGrupos('backup-campus')">💾 Backup</button>
     <button class="btn btn-success" onclick="saveGruposManual()" id="saveFirebaseBtn">🔥 Firebase</button>
     <button class="btn btn-danger" onclick="resetGroups()" style="grid-column:1/-1">🗑️ Reiniciar</button>
@@ -1314,6 +1329,15 @@ function renderResults(){
   </div>
   <div id="exportArea" style="display:none;margin-bottom:14px"><pre class="export-text" id="exportText"></pre></div>
 
+  <div id="colorFilters" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+    <button onclick="filterByColor(null,this)" class="btn btn-sm active" style="background:#0A0E14;color:#FFB800;border:1px solid #FFB800">Todos</button>
+    <button onclick="filterByColor('Rojo',this)" class="btn btn-sm" style="background:#FFEBEE;color:#C62828;border:1px solid #EF9A9A">🔴 Rojo</button>
+    <button onclick="filterByColor('Verde',this)" class="btn btn-sm" style="background:#E8F5E9;color:#2E7D32;border:1px solid #A5D6A7">🟢 Verde</button>
+    <button onclick="filterByColor('Azul',this)" class="btn btn-sm" style="background:#E3F2FD;color:#1565C0;border:1px solid #90CAF9">🔵 Azul</button>
+    <button onclick="filterByColor('Amarillo',this)" class="btn btn-sm" style="background:#FFFDE7;color:#F57F17;border:1px solid #FFF176">🟡 Amarillo</button>
+    <button onclick="filterByColor('Naranja',this)" class="btn btn-sm" style="background:#FFF3E0;color:#E65100;border:1px solid #FFCC80">🟠 Naranja</button>
+    <button onclick="filterByColor('Morado',this)" class="btn btn-sm" style="background:#F3E5F5;color:#6A1B9A;border:1px solid #CE93D8">🟣 Morado</button>
+  </div>
   <div class="turno-tabs" id="turnoTabs">${turnoNames.map((t,i)=>{
     const nKids = grupos[t].reduce((a,g)=>a+g.length,0);
     const nCom = grupos[t].reduce((a,g)=>a+g.filter(k=>k.comedor).length,0);
@@ -1326,8 +1350,8 @@ function renderResults(){
   </div>`).join('')}`;
   area.innerHTML=html;
   setupDragDrop();
-  setupDragDrop();
   setTimeout(checkUnassignedKids, 100);
+}
 
 function renderGruposGrid(turno){
   return grupos[turno].map((grupo,gi)=>{
@@ -1357,7 +1381,7 @@ function renderGruposGrid(turno){
         </div>
       </div>
     </div>`;
-  }).join('');
+  });
 }
 
 function renderNinoRow(kid,color,turno,gi){
@@ -1375,10 +1399,103 @@ function renderNinoRow(kid,color,turno,gi){
     ${fHere.length?'<span class="tag tag-friend">👫</span>':''}
     ${fOut.length?`<span class="tag tag-warn" title="Pedía: ${fOut.join(', ')}">!</span>`:''}
     <button onclick="openObsModal('${encodeURIComponent(name)}','${esc(turno)}')" style="background:none;border:1px solid #ddd;border-radius:6px;padding:3px 7px;cursor:pointer;font-size:.72rem;color:#888;margin-left:2px" title="Editar observaciones">✏️</button>
+    <button class="edit-only-btn" onclick="renameKid(this)" data-id="${kid.id}" data-turno="${esc(turno)}" data-gi="${gi}" style="display:none;background:none;border:1px solid #c8e6c9;border-radius:6px;padding:3px 7px;cursor:pointer;font-size:.72rem;color:#2e7d32;margin-left:2px" title="Cambiar nombre">✏️ Nombre</button>
+    <button class="edit-only-btn" onclick="removeKidFromGroup(this)" data-id="${kid.id}" data-turno="${esc(turno)}" data-gi="${gi}" style="display:none;background:none;border:1px solid #ffb3b3;border-radius:6px;padding:3px 7px;cursor:pointer;font-size:.72rem;color:#cc0000;margin-left:2px" title="Eliminar de este grupo">🗑️</button>
   </div>`;
 }
 
 let dragKidId=null,dragFromTurno=null,dragFromGi=null;
+
+function filterByColor(color, btn) {
+  // Update button styles
+  document.querySelectorAll('#colorFilters .btn').forEach(function(b) {
+    b.style.opacity = '0.5';
+    b.style.fontWeight = '400';
+  });
+  if(btn) { btn.style.opacity = '1'; btn.style.fontWeight = '700'; }
+
+  // Show/hide grupo cards
+  document.querySelectorAll('.grupo-card').forEach(function(card) {
+    const title = card.querySelector('.grupo-header span, .grupo-name');
+    const headerEl = card.querySelector('[class*="grupo-header"]') || card.firstElementChild;
+    const text = headerEl ? headerEl.textContent : '';
+    if(!color || text.toLowerCase().includes(color.toLowerCase())) {
+      card.style.display = '';
+    } else {
+      card.style.display = 'none';
+    }
+  });
+}
+
+function renameKid(btn) {
+  var kidId = btn.dataset.id;
+  var turno = btn.dataset.turno;
+  var gi = parseInt(btn.dataset.gi);
+  try { turno = decodeURIComponent(turno); } catch(e) {}
+  turno = turno.replace(/_/g, ' ');
+  if(!grupos[turno] || !grupos[turno][gi]) return;
+
+  var kid = grupos[turno][gi].find(function(k){ return String(k.id)===String(kidId); });
+  if(!kid) return;
+
+  var currentName = (kid.nombre||'') + (kid.apellidos ? ' '+kid.apellidos : '');
+  var newName = prompt('Nuevo nombre completo:', currentName);
+  if(!newName || !newName.trim() || newName.trim()===currentName) return;
+
+  var parts = newName.trim().split(' ');
+  var newNombre = parts[0] || '';
+  var newApellidos = parts.slice(1).join(' ') || '';
+
+  // Update in ALL semanas and groups (same kid might be in multiple weeks)
+  var updated = 0;
+  Object.keys(grupos).forEach(function(s) {
+    grupos[s].forEach(function(g) {
+      g.forEach(function(k) {
+        if(String(k.id)===String(kidId)) {
+          k.nombre = newNombre;
+          k.apellidos = newApellidos;
+          updated++;
+        }
+      });
+    });
+  });
+
+  saveToStorage();
+  window._unsavedChanges = true;
+  updateSaveReminder();
+  refreshGrid(turno);
+  setupDragDrop();
+  showToast('✅ Nombre actualizado en ' + updated + ' grupo(s)', 'success');
+  logChange('edit', currentName + ' → ' + newName.trim());
+}
+
+function removeKidFromGroup(btnOrId, turno, gi) {
+  if(!editMode) return;
+  var kidId = typeof btnOrId === 'object' ? btnOrId.dataset.id : btnOrId;
+  if(typeof btnOrId === 'object') { turno = btnOrId.dataset.turno; gi = parseInt(btnOrId.dataset.gi); }
+  gi = parseInt(gi);
+  // Decode turno - esc() replaces spaces with underscores, reverse it
+  try { turno = decodeURIComponent(turno); } catch(e) {}
+  turno = turno.replace(/_/g, ' ');
+  if(!grupos[turno] || !grupos[turno][gi]) { showToast('⚠️ Grupo no encontrado: ' + turno + '[' + gi + ']','error'); return; }
+  if(!confirm('¿Eliminar este niño/a de ' + getGroupName(gi) + ' (' + turno + ')?')) return;
+
+  // Find FIRST occurrence only in this specific group
+  var idx = grupos[turno][gi].findIndex(function(k){ return String(k.id)===String(kidId); });
+  if(idx >= 0) {
+    var kid = grupos[turno][gi][idx];
+    grupos[turno][gi].splice(idx, 1);
+    saveToStorage();
+    window._unsavedChanges = true;
+    updateSaveReminder();
+    refreshGrid(turno);
+    setupDragDrop();
+    showToast('🗑️ ' + fullName(kid) + ' eliminado de ' + getGroupName(gi), 'success');
+    logChange('remove', fullName(kid) + ' eliminado de ' + getGroupName(gi) + ' (' + turno + ')');
+  } else {
+    showToast('⚠️ No se encontró el niño en este grupo', 'error');
+  }
+}
 
 function setupDragDrop(){
   document.querySelectorAll('.nino-row').forEach(el=>{
@@ -1453,6 +1570,7 @@ function toggleEdit(){
   if(btn) btn.textContent=editMode?'🔒 Salir edición':'✏️ Editar grupos';
   if(btn) btn.className=editMode?'btn btn-danger':'btn btn-primary';
   document.querySelectorAll('.drag-handle').forEach(h=>h.style.color=editMode?'#0066FF':'#ccc');
+  document.querySelectorAll('.edit-only-btn').forEach(b=>b.style.display=editMode?'inline-block':'none');
   setupDragDrop();
 }
 
@@ -1718,6 +1836,7 @@ async function renderAttendList(){
           ${info?`<span class="attend-age">${info}</span>`:''}
           ${kid.comedor?'<span class="tag tag-comedor" style="font-size:.65rem">🍽️ Comedor</span>':''}
           ${kid.alergias?`<span class="attend-alergia">⚠️ ${kid.alergias}</span>`:''}
+          ${kid.talla?`<span class="tag" style="background:#EEF2FF;color:#3730A3;border:1px solid #C7D2FE;border-radius:5px;padding:1px 6px;font-size:.65rem">👕 ${kid.talla}</span>`:''}
           ${kid.otros?`<span class="attend-alergia" style="background:#F3EFF8;color:#6B3FA0;border-color:#D8C8F0">📝 ${kid.otros}</span>`:''}
         </div>
       </div>
@@ -2345,6 +2464,339 @@ function backupGrupos(filename) {
 }
 
 // ══════════════════════════════════════════════
+// ENRIQUECER DATOS DE NIÑOS
+// ══════════════════════════════════════════════
+function enrichKidsData(input) {
+  var file = input.files[0];
+  if(!file) return;
+  input.value = '';
+
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var wb = XLSX.read(e.target.result, {type:'array', cellDates:true});
+      var ws = wb.Sheets[wb.SheetNames[0]];
+      var rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+
+      if(!rows.length) { showToast('⚠️ El archivo está vacío','error'); return; }
+
+      // Build lookup map: "nombre apellidos" -> data
+      var lookup = {};
+      rows.forEach(function(row) {
+        var nombre = String(row['Nombre alumno/a:']||row['Nombre']||row['nombre']||'').trim().toLowerCase();
+        var apellidos = String(row['Apellidos alumno/a:']||row['Apellidos']||row['apellidos']||'').trim().toLowerCase();
+        if(!nombre) return;
+        var key = nombre + ' ' + apellidos;
+        lookup[key] = row;
+      });
+
+      // Match and enrich
+      var updated = 0, notFound = 0;
+      Object.keys(grupos).forEach(function(semana) {
+        grupos[semana].forEach(function(grupo) {
+          grupo.forEach(function(kid) {
+            var key = (kid.nombre||'').trim().toLowerCase() + ' ' + (kid.apellidos||'').trim().toLowerCase();
+            var data = lookup[key];
+            if(!data) {
+              // Try partial match (first name only)
+              var keyFirst = (kid.nombre||'').trim().toLowerCase();
+              data = lookup[Object.keys(lookup).find(function(k){ return k.startsWith(keyFirst+' '); })||''];
+            }
+            if(!data) { notFound++; return; }
+            updated++;
+
+            // Enrich fields
+            var sexo = String(data['Sexo']||'').trim();
+            if(sexo) kid.sexo = sexo;
+
+            var fecha = data['Fecha de nacimiento'];
+            if(fecha) {
+              var ano = null;
+              if(fecha instanceof Date) ano = fecha.getFullYear();
+              else { var m = String(fecha).match(/\d{4}/); if(m) ano = parseInt(m[0]); }
+              if(ano) { kid.anoNac = ano; kid.edad = 2025 - ano; }
+            }
+
+            var talla = String(data['Talla de camiseta']||'').trim();
+            if(talla && talla !== 'nan') kid.talla = talla;
+
+            var matRaw = String(data['Servicio de Matinera']||'').trim().toLowerCase();
+            kid.matinera = ['sí','si','yes','1'].includes(matRaw);
+
+            var alerRaw = String(data['Alergias o intolerancias']||'').trim();
+            var alerBad = ['nan','no','ninguna','ninguno','no tiene','no tiene alergias','ninguna conocida',''];
+            kid.alergias = alerBad.includes(alerRaw.toLowerCase()) ? '' : alerRaw;
+
+            var amigosRaw = String(data['Amigos/as en el campus']||'').trim();
+            var amBad = ['nan','no','ninguno',''];
+            kid.amigos = amBad.includes(amigosRaw.toLowerCase()) ? '' : amigosRaw;
+
+            var otrosRaw = String(data['Otros']||'').trim();
+            kid.otros = ['nan','','no'].includes(otrosRaw.toLowerCase()) ? '' : otrosRaw;
+
+            var comRaw = String(data['Servicio de Comedor']||'').trim().toLowerCase();
+            kid.comedor = ['sí','si','yes','1'].includes(comRaw);
+          });
+        });
+      });
+
+      saveToStorage();
+      window._saveGruposFirebase(grupos);
+      window._unsavedChanges = false;
+      updateSaveReminder();
+
+      showToast('✅ ' + updated + ' niños actualizados' + (notFound > 0 ? ' · ' + notFound + ' no encontrados' : ''), 'success');
+      logChange('edit', 'Datos enriquecidos desde Excel — ' + updated + ' niños actualizados');
+
+      // Refresh view
+      var activeTurno = document.querySelector('.ttab.active');
+      if(activeTurno) refreshGrid(activeTurno.textContent.split('\n')[0].trim());
+
+    } catch(err) {
+      showToast('❌ Error: ' + err.message, 'error');
+      console.error(err);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ══════════════════════════════════════════════
+// EXPORTAR TALLAS DE CAMISETA
+// ══════════════════════════════════════════════
+function exportTallas() {
+  if(!Object.keys(grupos).length) { showToast('⚠️ No hay grupos cargados','error'); return; }
+
+  var wb = XLSX.utils.book_new();
+  var semanas = Object.keys(grupos);
+
+  semanas.forEach(function(semana) {
+    var rows = [['Grupo','Nombre completo','Año nac.','Talla','Comedor','Alergias']];
+    grupos[semana].forEach(function(grupo, gi) {
+      var groupName = getGroupName(gi);
+      grupo.forEach(function(k) {
+        rows.push([
+          groupName,
+          fullName(k),
+          k.anoNac||'',
+          k.talla||'—',
+          k.comedor?'Sí':'No',
+          k.alergias||''
+        ]);
+      });
+      rows.push(['','','','','','']); // blank row between groups
+    });
+
+    var ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{wch:14},{wch:28},{wch:10},{wch:10},{wch:10},{wch:24}];
+
+    // Style header
+    var headerStyle = {fill:{fgColor:{rgb:'0A0E14'}},font:{bold:true,color:{rgb:'FFB800'}}};
+    ['A1','B1','C1','D1','E1','F1'].forEach(function(cell) {
+      if(ws[cell]) ws[cell].s = headerStyle;
+    });
+
+    XLSX.utils.book_append_sheet(wb, ws, semana.replace('Semana ','S'));
+  });
+
+  // Summary sheet: all kids unique, sorted by talla
+  var allKids = [];
+  var seen = new Set();
+  semanas.forEach(function(s) {
+    grupos[s].forEach(function(g) {
+      g.forEach(function(k) {
+        var uid = (k.nombre||'')+'_'+(k.apellidos||'');
+        if(!seen.has(uid)) {
+          seen.add(uid);
+          allKids.push(k);
+        }
+      });
+    });
+  });
+
+  // Count by talla
+  var tallaCounts = {};
+  allKids.forEach(function(k) {
+    var t = (k.talla||'Sin dato').toUpperCase().trim();
+    tallaCounts[t] = (tallaCounts[t]||0)+1;
+  });
+
+  var resumenRows = [['Talla','Cantidad']];
+  var order = ['2','4','6','8','10','12','14','XS','S','M','L','XL','XXL','SIN DATO'];
+  var sorted = Object.entries(tallaCounts).sort(function(a,b) {
+    var ia = order.indexOf(a[0]), ib = order.indexOf(b[0]);
+    if(ia<0) ia=99; if(ib<0) ib=99;
+    return ia-ib;
+  });
+  sorted.forEach(function(e) { resumenRows.push([e[0], e[1]]); });
+  resumenRows.push(['TOTAL', allKids.length]);
+
+  var wsRes = XLSX.utils.aoa_to_sheet(resumenRows);
+  wsRes['!cols'] = [{wch:12},{wch:12}];
+  XLSX.utils.book_append_sheet(wb, wsRes, 'Resumen tallas');
+
+  XLSX.writeFile(wb, 'tallas-camiseta.xlsx');
+  showToast('👕 Excel de tallas generado ✅','success');
+}
+
+// ══════════════════════════════════════════════
+// INFORME FINAL DE ASISTENCIA
+// ══════════════════════════════════════════════
+function exportInformeAsistencia() {
+  if(!window._fbDB) { showToast('⚠️ Necesitas Firebase conectado','error'); return; }
+  showToast('⏳ Generando informe...','success');
+
+  window._fbDB.collection('attendance').get().then(function(snap) {
+    // Build: kidCode -> {semana, dates: {date: status}}
+    var attData = {};
+    snap.forEach(function(doc) {
+      var parts = doc.id.split('_');
+      if(parts.length < 3) return;
+      var code = parts[1];
+      var date = parts[2];
+      try {
+        var data = JSON.parse(doc.data().data||'{}');
+        if(!attData[code]) attData[code] = {};
+        attData[code][date] = data;
+      } catch(e) {}
+    });
+
+    var wb = XLSX.utils.book_new();
+    var semanas = Object.keys(grupos);
+
+    semanas.forEach(function(semana) {
+      // Get all dates recorded for this semana's groups
+      var allDates = new Set();
+      grupos[semana].forEach(function(grupo, gi) {
+        var autoCode = makeCode(semana, gi);
+        var monRaw = null;
+        try { var ms=localStorage.getItem('campusMonitores'); if(ms) monRaw=JSON.parse(ms); } catch(e) {}
+        var monCode = monRaw&&monRaw.asignaciones&&monRaw.asignaciones[semana] ? monRaw.asignaciones[semana][gi]||'' : '';
+        var code = monCode || autoCode;
+        if(attData[code]) Object.keys(attData[code]).forEach(function(d){ allDates.add(d); });
+      });
+
+      var dates = Array.from(allDates).sort();
+      if(!dates.length) return;
+
+      var header = ['Grupo','Nombre','Año nac.'].concat(dates.map(function(d) {
+        var parts = d.split('-');
+        return parts[2]+'/'+parts[1];
+      })).concat(['Total días','% Asistencia']);
+
+      var rows = [header];
+
+      grupos[semana].forEach(function(grupo, gi) {
+        var groupName = getGroupName(gi);
+        var autoCode = makeCode(semana, gi);
+        var monRaw = null;
+        try { var ms=localStorage.getItem('campusMonitores'); if(ms) monRaw=JSON.parse(ms); } catch(e) {}
+        var monCode = monRaw&&monRaw.asignaciones&&monRaw.asignaciones[semana] ? monRaw.asignaciones[semana][gi]||'' : '';
+        var code = monCode || autoCode;
+        var dayData = attData[code] || {};
+
+        grupo.forEach(function(k) {
+          var kidName = fullName(k);
+          var present = 0, total = 0;
+          var dayCells = dates.map(function(d) {
+            var dayAtt = dayData[d];
+            if(!dayAtt) return '—';
+            var status = dayAtt[kidName] || dayAtt[k.id] || '';
+            if(status==='present'||status==='P') { present++; total++; return '✅'; }
+            if(status==='absent'||status==='A') { total++; return '❌'; }
+            return '—';
+          });
+          var pct = total ? Math.round(present/total*100)+'%' : '—';
+          rows.push([groupName, kidName, k.anoNac||''].concat(dayCells).concat([present+'/'+total, pct]));
+        });
+        rows.push(new Array(header.length).fill(''));
+      });
+
+      var ws = XLSX.utils.aoa_to_sheet(rows);
+      ws['!cols'] = [{wch:14},{wch:28},{wch:8}].concat(dates.map(function(){return {wch:8};})).concat([{wch:10},{wch:12}]);
+      XLSX.utils.book_append_sheet(wb, ws, semana.replace('Semana ','S'));
+    });
+
+    XLSX.writeFile(wb, 'informe-asistencia-campus.xlsx');
+    showToast('📊 Informe generado ✅','success');
+  }).catch(function(e) {
+    showToast('❌ Error: '+e.message,'error');
+  });
+}
+
+// ══════════════════════════════════════════════
+// INCIDENCIAS DE PADRES
+// ══════════════════════════════════════════════
+function loadIncidencias() {
+  var el = document.getElementById('incidencias-list');
+  if(!el) return;
+  if(!window._fbDB) { el.innerHTML = '<p style="color:red">Firebase no conectado.</p>'; return; }
+  el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)">Cargando...</div>';
+
+  window._fbDB.collection('incidencias').orderBy('fecha','desc').get().then(function(snap) {
+    if(snap.empty) {
+      el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">No hay incidencias todavía.</div>';
+      return;
+    }
+    el.innerHTML = '';
+    snap.forEach(function(doc) {
+      var d = doc.data();
+      var fecha = d.fecha && d.fecha.toDate ? d.fecha.toDate() : new Date(d.fecha);
+      var fechaStr = fecha.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'2-digit'}) + ' ' +
+                     fecha.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+      var card = document.createElement('div');
+      card.style.cssText = 'background:'+(d.leida?'#f8f9fa':'#fff')+';border:1px solid '+(d.leida?'#e0e0e0':'#90CAF9')+';border-radius:12px;padding:14px 16px;margin-bottom:10px';
+
+      var header = document.createElement('div');
+      header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px';
+      var waLink = d.telefono ? ' <a href="https://wa.me/34'+d.telefono.replace(/\D/g,'')+'" target="_blank" style="color:#25D366;font-size:.75rem;font-weight:600;text-decoration:none">📱 WhatsApp</a>' : '';
+      header.innerHTML = '<div style="font-weight:700;font-size:.88rem">'+d.nombre+' · <span style="color:var(--sky)">'+d.nino+'</span>'+(d.telefono?'<span style="font-size:.75rem;color:#888;font-weight:400"> · '+d.telefono+'</span>':'')+waLink+'</div>'+
+        '<div style="font-size:.72rem;color:#aaa">'+fechaStr+'</div>';
+      card.appendChild(header);
+
+      var msg = document.createElement('div');
+      msg.style.cssText = 'font-size:.84rem;color:#333;line-height:1.5;margin-bottom:10px';
+      msg.textContent = d.texto;
+      card.appendChild(msg);
+
+      var actions = document.createElement('div');
+      actions.style.cssText = 'display:flex;gap:8px';
+      var btnLeer = document.createElement('button');
+      btnLeer.className = 'btn btn-outline btn-sm';
+      btnLeer.textContent = d.leida ? '✅ Leída' : '👁️ Marcar como leída';
+      btnLeer.style.opacity = d.leida ? '0.5' : '1';
+      btnLeer.addEventListener('click', (function(id, card, btn, data){
+        return function() {
+          window._fbDB.collection('incidencias').doc(id).update({leida: true}).then(function() {
+            card.style.background = '#f8f9fa';
+            card.style.borderColor = '#e0e0e0';
+            btn.textContent = '✅ Leída';
+            btn.style.opacity = '0.5';
+          });
+        };
+      })(doc.id, card, btnLeer, d));
+      actions.appendChild(btnLeer);
+
+      var btnDel = document.createElement('button');
+      btnDel.className = 'btn btn-danger btn-sm';
+      btnDel.textContent = '🗑️';
+      btnDel.addEventListener('click', (function(id, card){
+        return function() {
+          if(!confirm('¿Eliminar esta incidencia?')) return;
+          window._fbDB.collection('incidencias').doc(id).delete().then(function() {
+            card.remove();
+          });
+        };
+      })(doc.id, card));
+      actions.appendChild(btnDel);
+      card.appendChild(actions);
+      el.appendChild(card);
+    });
+  }).catch(function(e) {
+    el.innerHTML = '<p style="color:red">Error: '+e.message+'</p>';
+  });
+}
+
+// ══════════════════════════════════════════════
 // EXPORTAR PDF POR GRUPO
 // ══════════════════════════════════════════════
 function exportGroupsPDF() {
@@ -2674,48 +3126,313 @@ async function loadGruposExcel(file) {
 
   try {
     const data = await readFileAsArrayBuffer(file);
-    const wb = XLSX.read(data, {type:'array'});
+    const wb = XLSX.read(data, {type:'array', cellDates:true});
 
-    // Check for TODOS sheet
-    if(!wb.SheetNames.includes('TODOS')) {
-      status.innerHTML = '<div class="alert" style="background:#FFE0E0;border:1px solid #FFC0C0;border-radius:8px;padding:10px 14px;font-size:.82rem;color:#C00">❌ No se encontró la hoja "TODOS". Asegúrate de subir el Excel correcto.</div>';
-      return;
+    // Detect format: new format has S1/S2/S3/S4/S5 sheets
+    const semanSheets = wb.SheetNames.filter(s => /^S[1-5]$/i.test(s.trim()));
+    
+    if(semanSheets.length > 0) {
+      // Check if it's Fichas format (has Nombre/Apellidos/Comedor columns)
+      const firstSheet = XLSX.utils.sheet_to_json(wb.Sheets[semanSheets[0]], {header:1, defval:''});
+      const hasFichasFormat = firstSheet.some(row => String(row[0]||'').toLowerCase().includes('nombre') || String(row[7]||'').toLowerCase().includes('comedor'));
+      if(hasFichasFormat) {
+        await loadFichasGrupos(wb, semanSheets, status);
+      } else {
+        await loadGruposExcelNuevo(wb, semanSheets, status);
+      }
+    } else if(wb.SheetNames.includes('TODOS')) {
+      // OLD FORMAT: hoja TODOS
+      await loadGruposExcelAntiguo(wb, status);
+    } else {
+      status.innerHTML = '<div class="alert" style="background:#FFE0E0;border:1px solid #FFC0C0;border-radius:8px;padding:10px 14px;font-size:.82rem;color:#C00">❌ Formato no reconocido. El archivo debe tener hojas S1-S5 o una hoja TODOS.</div>';
     }
-
-    // Parse TODOS for group structure
-    const todosData = XLSX.utils.sheet_to_json(wb.Sheets['TODOS'], {header:1, defval:''});
-    const groups = parseGruposTodos(todosData);
-
-    // Parse detail sheets for full kid data
-    const detailSheets = wb.SheetNames.filter(s => !['TODOS','PLANTILLA'].includes(s));
-    const allKidsData = {};
-    for(const sheet of detailSheets) {
-      const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheet], {header:1, defval:''});
-      parseDetailSheet(rows, allKidsData);
-    }
-
-    // Cross-reference
-    const result = crossReference(groups, allKidsData);
-    _gruposExcelParsed = result;
-
-    const total = Object.values(result).reduce((a,g)=>a+g.length,0);
-    const comedor = Object.values(result).reduce((a,g)=>a+g.filter(k=>k.comedor).length,0);
-    const alergias = Object.values(result).reduce((a,g)=>a+g.filter(k=>k.alergias).length,0);
-
-    status.innerHTML = `<div class="alert alert-success">
-      ✅ Leído correctamente: <strong>${Object.keys(result).length} grupos</strong>, ${total} niños, ${comedor} comedor, ${alergias} con alergias.<br>
-      <span style="font-size:.78rem;color:#555">Grupos: ${Object.keys(result).join(', ')}</span>
-    </div>`;
-    document.getElementById('gruposImportSemana').style.display = 'block';
-    // Auto-set semana from current tab
-    const semanaAuto = CAMPUS_WEEKS[_currentSemanTab].label;
-    document.getElementById('gruposImportSemanaSelect').value = semanaAuto;
-    document.getElementById('semana-btn-label').textContent = semanaAuto;
-
   } catch(e) {
-    status.innerHTML = `<div class="alert" style="background:#FFE0E0;border:1px solid #FFC0C0;border-radius:8px;padding:10px 14px;font-size:.82rem;color:#C00">❌ Error leyendo el archivo: ${e.message}</div>`;
+    status.innerHTML = `<div class="alert" style="background:#FFE0E0;border:1px solid #FFC0C0;border-radius:8px;padding:10px 14px;font-size:.82rem;color:#C00">❌ Error: ${e.message}</div>`;
     console.error(e);
   }
+}
+
+
+async function loadFichasGrupos(wb, semanSheets, status) {
+  status.innerHTML = '<div class="alert alert-info">⏳ Leyendo Fichas_Grupos...</div>';
+
+  const allSemanas = {};
+  var totalKids = 0, totalGroups = 0;
+
+  semanSheets.forEach(function(sheetName) {
+    const semanaNum = sheetName.trim().toUpperCase().replace('S','');
+    const semanaLabel = 'Semana ' + semanaNum;
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {header:1, defval:'', cellDates:true});
+
+    const groups = {};
+    var currentGroup = null;
+    var skipHeader = false;
+
+    rows.forEach(function(row) {
+      const val = String(row[0]||'').trim();
+      const valUp = val.toUpperCase();
+
+      // Group header
+      const isGroup = ['ROJO','AZUL','VERDE','AMARILLO','NARANJA','MORADO'].some(c => valUp.includes(c));
+      if(isGroup && !valUp.match(/^(NOMBRE|NAME)$/)) {
+        if(val.match(/\d/) || valUp !== valUp.replace(/[1-9]/g,'')) {
+          // Has a number - it's a specific group like "ROJO 1"
+          currentGroup = val.split(' ').map(function(w){ return w.charAt(0).toUpperCase()+w.slice(1).toLowerCase(); }).join(' ');
+          groups[currentGroup] = [];
+          skipHeader = true;
+          return;
+        } else if(!valUp.match(/\d/)) {
+          // Just "ROJO" - could be a color-only header, make it group "Rojo 1" style
+          // Skip pure color headers
+          skipHeader = false;
+          return;
+        }
+      }
+
+      // Skip column header row (Nombre, Apellidos, etc.)
+      if(skipHeader || valUp === 'NOMBRE' || valUp === 'NAME') {
+        skipHeader = false;
+        return;
+      }
+
+      if(!currentGroup || !val || val === 'nan') return;
+
+      var nombre = val;
+      var apellidos = String(row[1]||'').trim();
+      if(apellidos === 'nan') apellidos = '';
+
+      // Parse date/year
+      var anoNac = null;
+      var fecha = row[2];
+      if(fecha) {
+        if(fecha instanceof Date) {
+          anoNac = fecha.getFullYear();
+        } else {
+          var s = String(fecha).trim();
+          var m = s.match(/\d{4}/);
+          if(m) anoNac = parseInt(m[0]);
+          else if(s.includes('/')) {
+            var parts = s.split('/');
+            var y = parts[parts.length-1];
+            if(y.length === 2) y = '20'+y;
+            anoNac = parseInt(y)||null;
+          }
+        }
+      }
+
+      var matRaw = String(row[3]||'').trim().toLowerCase();
+      var matinera = ['sí','si','yes','1','s'].includes(matRaw);
+
+      var alerRaw = String(row[4]||'').trim();
+      var alergias = ['nan','ninguna','no','ninguno','no tiene','no tiene.','ninguna conocida','no tiene alergias','ninguna conocida.','no'].includes(alerRaw.toLowerCase()) ? '' : alerRaw;
+
+      var amigosRaw = String(row[5]||'').trim();
+      var amigos = ['nan','no','ninguno',''].includes(amigosRaw.toLowerCase()) ? '' : amigosRaw;
+
+      var otrosRaw = String(row[6]||'').trim();
+      var otros = ['nan',''].includes(otrosRaw) ? '' : otrosRaw;
+
+      var comRaw = String(row[7]||'').trim().toLowerCase();
+      var comedor = ['sí','si','yes','1','s'].includes(comRaw);
+
+      var ts = Date.now() + '_' + Math.random().toString(36).slice(2);
+      groups[currentGroup].push({
+        id: ts,
+        nombre: nombre,
+        apellidos: apellidos,
+        anoNac: anoNac,
+        edad: anoNac ? (2025 - anoNac) : null,
+        matinera: matinera,
+        alergias: alergias,
+        amigos: amigos,
+        otros: otros,
+        comedor: comedor,
+        semanas: [semanaLabel]
+      });
+    });
+
+    // Filter empty groups
+    var filtered = {};
+    Object.keys(groups).forEach(function(g) {
+      if(groups[g].length > 0) filtered[g] = groups[g];
+    });
+
+    allSemanas[semanaLabel] = filtered;
+    totalGroups += Object.keys(filtered).length;
+    totalKids += Object.values(filtered).reduce(function(a,g){ return a+g.length; }, 0);
+  });
+
+  // Warn if existing grupos
+  if(Object.keys(grupos).length > 0) {
+    if(!confirm('⚠️ Ya hay grupos cargados.\n\n¿Reemplazar con los del Excel de Fichas?\n\nEsto borrará los grupos actuales.')) {
+      status.innerHTML = '<div class="alert alert-info">ℹ️ Importación cancelada.</div>';
+      return;
+    }
+  }
+
+  // Load into grupos
+  Object.keys(allSemanas).forEach(function(semana) {
+    grupos[semana] = Object.values(allSemanas[semana]);
+  });
+
+  saveToStorage();
+  window._saveGruposFirebase(grupos);
+  window._unsavedChanges = false;
+  updateSaveReminder();
+
+  // Count stats
+  var comedorTotal = 0, matineraTotal = 0, alergiasTotal = 0;
+  Object.values(allSemanas).forEach(function(gs) {
+    Object.values(gs).forEach(function(g) {
+      g.forEach(function(k) {
+        if(k.comedor) comedorTotal++;
+        if(k.matinera) matineraTotal++;
+        if(k.alergias) alergiasTotal++;
+      });
+    });
+  });
+
+  status.innerHTML = '<div class="alert alert-success">' +
+    '✅ <strong>Fichas importadas correctamente</strong><br>' +
+    '<strong>' + totalGroups + ' grupos</strong> · <strong>' + totalKids + ' niños</strong> · ' +
+    comedorTotal + ' comedor · ' + matineraTotal + ' matinera · ' + alergiasTotal + ' con alergias<br>' +
+    '<strong style="color:#00C46A">✅ Guardado en Firebase automáticamente</strong>' +
+    '</div>';
+
+  logChange('generate', 'Fichas importadas — ' + totalKids + ' niños en ' + totalGroups + ' grupos con comedor/matinera/alergias');
+  showToast('✅ ' + totalKids + ' niños importados con todos sus datos', 'success');
+  setTimeout(function(){ goStep(4); }, 800);
+}
+
+async function loadGruposExcelNuevo(wb, semanSheets, status) {
+  // Parse each S1-S5 sheet
+  const allSemanas = {};
+  var totalKids = 0, totalGroups = 0;
+
+  semanSheets.forEach(function(sheetName) {
+    const semanaNum = sheetName.trim().toUpperCase().replace('S','');
+    const semanaLabel = 'Semana ' + semanaNum;
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {header:1, defval:''});
+    
+    const groups = {};
+    
+    // Find all group header rows
+    for(var row = 0; row < rows.length; row++) {
+      const r = rows[row];
+      // Check col 0 for group name (e.g. "ROJO 1", "AZUL 2")
+      for(var col = 0; col < r.length; col += 5) {
+        const val = String(r[col]||'').trim().toUpperCase();
+        if(!val || val === 'NAN') continue;
+        const isGroupHeader = ['ROJO','AZUL','VERDE','AMARILLO','NARANJA','MORADO'].some(c => val.includes(c));
+        if(!isGroupHeader) continue;
+        if(val.match(/^(ROJO|AZUL|VERDE|AMARILLO|NARANJA|MORADO)$/) && !val.match(/\d/)) continue; // skip color-only headers
+        
+        const groupName = val.split(' ').map(w => w.charAt(0)+w.slice(1).toLowerCase()).join(' ');
+        if(!groups[groupName]) groups[groupName] = [];
+        
+        // Read kids below
+        for(var kr = row+1; kr < rows.length; kr++) {
+          const krow = rows[kr];
+          // Stop if hit another group header
+          const firstVal = String(krow[col]||'').trim().toUpperCase();
+          const isNextGroup = ['ROJO','AZUL','VERDE','AMARILLO','NARANJA','MORADO'].some(c => firstVal.includes(c)) && firstVal !== '';
+          if(isNextGroup) break;
+          
+          const nombre = String(krow[col+1]||'').trim();
+          const apellidos = String(krow[col+2]||'').trim();
+          if(!nombre || nombre === 'NAN' || nombre === '') continue;
+          
+          // Parse year
+          var anoNac = null;
+          const anoRaw = krow[col+3];
+          if(anoRaw) {
+            if(anoRaw instanceof Date) {
+              anoNac = anoRaw.getFullYear();
+            } else if(typeof anoRaw === 'number' && anoRaw > 1990 && anoRaw < 2030) {
+              anoNac = Math.round(anoRaw);
+            } else if(typeof anoRaw === 'string' && anoRaw.match(/\d{4}/)) {
+              anoNac = parseInt(anoRaw.match(/\d{4}/)[0]);
+            }
+          }
+          
+          const ts = Date.now() + Math.random();
+          groups[groupName].push({
+            id: String(ts),
+            nombre: nombre,
+            apellidos: apellidos,
+            anoNac: anoNac,
+            edad: anoNac ? (2025 - anoNac) : null,
+            comedor: false,
+            alergias: '',
+            obs: '',
+            semanas: [semanaLabel]
+          });
+        }
+      }
+    }
+    
+    // Filter out empty groups
+    const filtered = {};
+    Object.keys(groups).forEach(function(g) {
+      if(groups[g].length > 0) filtered[g] = groups[g];
+    });
+    
+    allSemanas[semanaLabel] = filtered;
+    totalGroups += Object.keys(filtered).length;
+    totalKids += Object.values(filtered).reduce(function(a,g){return a+g.length;}, 0);
+  });
+
+  // Check if existing grupos in Firebase — warn but allow
+  const existingGrupos = Object.keys(grupos).length > 0;
+  if(existingGrupos) {
+    if(!confirm('⚠️ Ya hay grupos cargados. ¿Quieres REEMPLAZARLOS con los del Excel?\n\nEsto borrará los grupos actuales y los sustituirá por los del Excel.\n\nPulsa Cancelar para no hacer nada.')) {
+      status.innerHTML = '<div class="alert alert-info">ℹ️ Importación cancelada. Los grupos actuales no se han modificado.</div>';
+      return;
+    }
+  }
+
+  // Load into grupos
+  Object.keys(allSemanas).forEach(function(semana) {
+    grupos[semana] = Object.values(allSemanas[semana]);
+  });
+
+  saveToStorage();
+  window._saveGruposFirebase(grupos);
+  window._unsavedChanges = false;
+  updateSaveReminder();
+
+  var semNames = Object.keys(allSemanas).join(', ');
+  status.innerHTML = `<div class="alert alert-success">
+    ✅ Importado correctamente: <strong>${totalGroups} grupos</strong>, <strong>${totalKids} niños</strong> en ${semanSheets.length} semanas.<br>
+    <span style="font-size:.78rem;color:#555">${semNames}</span><br>
+    <strong style="color:#00C46A">Los grupos se han guardado en Firebase automáticamente.</strong>
+  </div>`;
+  
+  logChange('generate', 'Grupos importados desde Excel — ' + totalKids + ' niños en ' + totalGroups + ' grupos');
+  showToast('✅ ' + totalKids + ' niños importados en ' + totalGroups + ' grupos', 'success');
+  
+  // Navigate to grupos view
+  setTimeout(function(){ goStep(4); }, 800);
+}
+
+async function loadGruposExcelAntiguo(wb, status) {
+  // Keep old logic for backwards compat
+  const todosData = XLSX.utils.sheet_to_json(wb.Sheets['TODOS'], {header:1, defval:''});
+  const groups = parseGruposTodos(todosData);
+  const detailSheets = wb.SheetNames.filter(s => !['TODOS','PLANTILLA'].includes(s));
+  const allKidsData = {};
+  for(const sheet of detailSheets) {
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheet], {header:1, defval:''});
+    parseDetailSheet(rows, allKidsData);
+  }
+  const result = crossReference(groups, allKidsData);
+  _gruposExcelParsed = result;
+  const total = Object.values(result).reduce((a,g)=>a+g.length,0);
+  status.innerHTML = `<div class="alert alert-success">✅ Leído (formato antiguo): <strong>${Object.keys(result).length} grupos</strong>, ${total} niños.</div>`;
+  document.getElementById('gruposImportSemana').style.display = 'block';
+  const semanaAuto = CAMPUS_WEEKS[_currentSemanTab].label;
+  document.getElementById('gruposImportSemanaSelect').value = semanaAuto;
+  document.getElementById('semana-btn-label').textContent = semanaAuto;
 }
 
 function readFileAsArrayBuffer(file) {
@@ -3870,6 +4587,14 @@ function printComedor() {
 function searchKidInGroups(q) {
   const res = document.getElementById('kidSearchResults');
   if(!q || q.trim().length < 2) { if(res) res.style.display='none'; return; }
+  // Position dropdown below the input
+  const inp = document.getElementById('kidSearchInput');
+  if(inp && res) {
+    const rect = inp.getBoundingClientRect();
+    res.style.top = (rect.bottom + 4) + 'px';
+    res.style.left = rect.left + 'px';
+    res.style.width = rect.width + 'px';
+  }
   const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
   const qn = norm(q);
   const hits = [];
@@ -3887,22 +4612,142 @@ function searchKidInGroups(q) {
     res.innerHTML='<div style="padding:14px 16px;color:#888;font-size:.85rem">😕 No encontrado</div>';
     return;
   }
+  // Group hits by kid name
+  const byKid = {};
+  hits.forEach(h => {
+    if(!byKid[h.name]) byKid[h.name] = {kid:h.kid, semanas:[]};
+    byKid[h.name].semanas.push({semana:h.semana, gi:h.gi});
+  });
+
   res.style.display='block';
-  res.innerHTML = hits.slice(0,10).map(h => {
-    const color = getGroupColor(h.gi);
-    const gname = getGroupName(h.gi);
-    const ale = h.kid.alergias ? `<span style="color:#E74C3C;font-size:.7rem">⚠️ ${h.kid.alergias}</span>` : '';
-    const com = h.kid.comedor ? '<span style="color:#F39C12;font-size:.7rem">🍽️</span>' : '';
-    return `<div onclick="jumpToKid('${esc(h.semana)}',${h.gi},'${encodeURIComponent(h.name)}')"
-      style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #F0F2F5;display:flex;align-items:center;gap:10px;transition:background .15s"
-      onmouseover="this.style.background='#F7FAFF'" onmouseout="this.style.background='#fff'">
-      <div style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0"></div>
-      <div style="flex:1">
-        <div style="font-weight:600;font-size:.85rem">${h.name}</div>
-        <div style="font-size:.72rem;color:#888">${h.semana} · ${gname} ${com} ${ale}</div>
-      </div>
-    </div>`;
+  res.innerHTML = '';
+  Object.entries(byKid).slice(0,8).forEach(([name, data]) => {
+    const semanasList = data.semanas.map(s => {
+      const color = getGroupColor(s.gi);
+      const gname = getGroupName(s.gi);
+      return `<span style="background:${color}22;border:1px solid ${color}55;color:${color};border-radius:5px;padding:1px 7px;font-size:.68rem;font-weight:600">${s.semana.replace('Semana ','S')} · ${gname}</span>`;
+    }).join(' ');
+    const ale = data.kid.alergias ? `<span style="color:#E74C3C;font-size:.7rem">⚠️</span>` : '';
+    const com = data.kid.comedor ? '<span style="font-size:.7rem">🍽️</span>' : '';
+    const div = document.createElement('div');
+    div.style.cssText = 'padding:10px 14px;cursor:pointer;border-bottom:1px solid #F0F2F5;display:flex;align-items:center;gap:10px';
+    div.dataset.kidname = name;
+    div.innerHTML = '<div style="flex:1"><div style="font-weight:600;font-size:.85rem">' + name + ' ' + com + ' ' + ale + '</div><div style="font-size:.72rem;color:#888;margin-top:3px;display:flex;gap:4px;flex-wrap:wrap">' + (semanasList || '<span style="color:#ccc">Sin semanas asignadas</span>') + '</div></div><span style="color:#aaa;font-size:.8rem">✏️</span>';
+    div.addEventListener('mouseover', function(){ this.style.background='#F7FAFF'; });
+    div.addEventListener('mouseout', function(){ this.style.background=''; });
+    div.addEventListener('click', function(){ openKidAssignModal(encodeURIComponent(this.dataset.kidname)); });
+    res.appendChild(div);
   }).join('');
+}
+
+function openKidAssignModal(encodedName) {
+  const res = document.getElementById('kidSearchResults');
+  if(res) res.style.display='none';
+  const inp = document.getElementById('kidSearchInput');
+  if(inp) inp.value='';
+
+  const name = decodeURIComponent(encodedName);
+  const semanas = Object.keys(grupos);
+
+  // Find kid data from any semana
+  let kidData = null;
+  semanas.forEach(s => { grupos[s].forEach(g => { g.forEach(k => { if(fullName(k)===name && !kidData) kidData=k; }); }); });
+
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+
+  const card = document.createElement('div');
+  card.style.cssText = 'background:#fff;border-radius:16px;padding:24px;max-width:520px;width:100%;max-height:85vh;overflow-y:auto';
+
+  // Header
+  const header = document.createElement('div');
+  header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:18px';
+  header.innerHTML = '<div style="font-weight:800;font-size:1.1rem">✏️ ' + name + '</div>';
+  const btnClose = document.createElement('button');
+  btnClose.style.cssText = 'background:none;border:none;font-size:1.4rem;cursor:pointer;color:#aaa';
+  btnClose.textContent = '✕';
+  btnClose.onclick = function(){ modal.remove(); };
+  header.appendChild(btnClose);
+  card.appendChild(header);
+
+  // For each semana: show current group + selector to change
+  semanas.forEach(function(semana) {
+    const semanaDiv = document.createElement('div');
+    semanaDiv.style.cssText = 'margin-bottom:12px;padding:12px 14px;background:#f8f9fa;border-radius:10px;border:1px solid #eee';
+
+    // Find current group in this semana
+    let currentGi = -1;
+    grupos[semana].forEach(function(g, gi) {
+      if(g.find(function(k){ return fullName(k)===name; })) currentGi = gi;
+    });
+
+    const label = document.createElement('div');
+    label.style.cssText = 'font-weight:700;font-size:.85rem;margin-bottom:8px;color:#333';
+    label.textContent = semana;
+    semanaDiv.appendChild(label);
+
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:8px;align-items:center';
+
+    // Current status
+    const status = document.createElement('div');
+    status.style.cssText = 'flex:1;font-size:.82rem;color:' + (currentGi>=0?'var(--grass)':'#aaa');
+    status.textContent = currentGi>=0 ? '✅ ' + getGroupName(currentGi) : '— Sin asignar';
+    row.appendChild(status);
+
+    // Group selector
+    const sel = document.createElement('select');
+    sel.style.cssText = 'border:1px solid var(--border);border-radius:7px;padding:5px 8px;font-size:.78rem;max-width:160px';
+    const optNone = document.createElement('option');
+    optNone.value = '-1'; optNone.textContent = currentGi>=0 ? '🗑️ Quitar de esta semana' : '— No asignar —';
+    sel.appendChild(optNone);
+    grupos[semana].forEach(function(g, gi) {
+      const opt = document.createElement('option');
+      opt.value = gi;
+      opt.textContent = getGroupName(gi) + ' (' + g.length + ')';
+      if(gi === currentGi) opt.selected = true;
+      sel.appendChild(opt);
+    });
+
+    const btnSave = document.createElement('button');
+    btnSave.className = 'btn btn-primary btn-sm';
+    btnSave.textContent = 'Guardar';
+    btnSave.addEventListener('click', (function(s, cgi, selEl, statusEl){
+      return function() {
+        const newGi = parseInt(selEl.value);
+        // Remove from current group
+        if(cgi >= 0 && grupos[s][cgi]) {
+          const idx = grupos[s][cgi].findIndex(function(k){ return fullName(k)===name; });
+          if(idx>=0) grupos[s][cgi].splice(idx,1);
+        }
+        // Add to new group
+        if(newGi >= 0 && grupos[s][newGi] && kidData) {
+          const kidCopy = JSON.parse(JSON.stringify(kidData));
+          kidCopy.turno = s;
+          grupos[s][newGi].push(kidCopy);
+          statusEl.style.color = 'var(--grass)';
+          statusEl.textContent = '✅ ' + getGroupName(newGi);
+          logChange('move', name + ' asignado a ' + getGroupName(newGi) + ' en ' + s);
+        } else if(newGi < 0) {
+          statusEl.style.color = '#aaa';
+          statusEl.textContent = '— Sin asignar';
+          logChange('remove', name + ' quitado de ' + s);
+        }
+        saveToStorage();
+        window._unsavedChanges = true;
+        updateSaveReminder();
+        showToast('✅ ' + s + ' actualizado','success');
+      };
+    })(semana, currentGi, sel, status));
+
+    row.appendChild(sel);
+    row.appendChild(btnSave);
+    semanaDiv.appendChild(row);
+    card.appendChild(semanaDiv);
+  });
+
+  modal.appendChild(card);
+  document.body.appendChild(modal);
 }
 
 function jumpToKid(turnoEsc, gi, encodedName) {
@@ -4383,6 +5228,339 @@ function renderStats() {
   el.appendChild(card('📐 Tamaño de grupos', sizeHtml));
 }
 
+
+// ══════════════════════════════════════════════
+// ENRIQUECER DATOS DE NIÑOS
+// ══════════════════════════════════════════════
+function enrichKidsData(input) {
+  var file = input.files[0];
+  if(!file) return;
+  input.value = '';
+
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var wb = XLSX.read(e.target.result, {type:'array', cellDates:true});
+      var ws = wb.Sheets[wb.SheetNames[0]];
+      var rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+
+      if(!rows.length) { showToast('⚠️ El archivo está vacío','error'); return; }
+
+      // Build lookup map: "nombre apellidos" -> data
+      var lookup = {};
+      rows.forEach(function(row) {
+        var nombre = String(row['Nombre alumno/a:']||row['Nombre']||row['nombre']||'').trim().toLowerCase();
+        var apellidos = String(row['Apellidos alumno/a:']||row['Apellidos']||row['apellidos']||'').trim().toLowerCase();
+        if(!nombre) return;
+        var key = nombre + ' ' + apellidos;
+        lookup[key] = row;
+      });
+
+      // Match and enrich
+      var updated = 0, notFound = 0;
+      Object.keys(grupos).forEach(function(semana) {
+        grupos[semana].forEach(function(grupo) {
+          grupo.forEach(function(kid) {
+            var key = (kid.nombre||'').trim().toLowerCase() + ' ' + (kid.apellidos||'').trim().toLowerCase();
+            var data = lookup[key];
+            if(!data) {
+              // Try partial match (first name only)
+              var keyFirst = (kid.nombre||'').trim().toLowerCase();
+              data = lookup[Object.keys(lookup).find(function(k){ return k.startsWith(keyFirst+' '); })||''];
+            }
+            if(!data) { notFound++; return; }
+            updated++;
+
+            // Enrich fields
+            var sexo = String(data['Sexo']||'').trim();
+            if(sexo) kid.sexo = sexo;
+
+            var fecha = data['Fecha de nacimiento'];
+            if(fecha) {
+              var ano = null;
+              if(fecha instanceof Date) ano = fecha.getFullYear();
+              else { var m = String(fecha).match(/\d{4}/); if(m) ano = parseInt(m[0]); }
+              if(ano) { kid.anoNac = ano; kid.edad = 2025 - ano; }
+            }
+
+            var talla = String(data['Talla de camiseta']||'').trim();
+            if(talla && talla !== 'nan') kid.talla = talla;
+
+            var matRaw = String(data['Servicio de Matinera']||'').trim().toLowerCase();
+            kid.matinera = ['sí','si','yes','1'].includes(matRaw);
+
+            var alerRaw = String(data['Alergias o intolerancias']||'').trim();
+            var alerBad = ['nan','no','ninguna','ninguno','no tiene','no tiene alergias','ninguna conocida',''];
+            kid.alergias = alerBad.includes(alerRaw.toLowerCase()) ? '' : alerRaw;
+
+            var amigosRaw = String(data['Amigos/as en el campus']||'').trim();
+            var amBad = ['nan','no','ninguno',''];
+            kid.amigos = amBad.includes(amigosRaw.toLowerCase()) ? '' : amigosRaw;
+
+            var otrosRaw = String(data['Otros']||'').trim();
+            kid.otros = ['nan','','no'].includes(otrosRaw.toLowerCase()) ? '' : otrosRaw;
+
+            var comRaw = String(data['Servicio de Comedor']||'').trim().toLowerCase();
+            kid.comedor = ['sí','si','yes','1'].includes(comRaw);
+          });
+        });
+      });
+
+      saveToStorage();
+      window._saveGruposFirebase(grupos);
+      window._unsavedChanges = false;
+      updateSaveReminder();
+
+      showToast('✅ ' + updated + ' niños actualizados' + (notFound > 0 ? ' · ' + notFound + ' no encontrados' : ''), 'success');
+      logChange('edit', 'Datos enriquecidos desde Excel — ' + updated + ' niños actualizados');
+
+      // Refresh view
+      var activeTurno = document.querySelector('.ttab.active');
+      if(activeTurno) refreshGrid(activeTurno.textContent.split('\n')[0].trim());
+
+    } catch(err) {
+      showToast('❌ Error: ' + err.message, 'error');
+      console.error(err);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ══════════════════════════════════════════════
+// EXPORTAR TALLAS DE CAMISETA
+// ══════════════════════════════════════════════
+function exportTallas() {
+  if(!Object.keys(grupos).length) { showToast('⚠️ No hay grupos cargados','error'); return; }
+
+  var wb = XLSX.utils.book_new();
+  var semanas = Object.keys(grupos);
+
+  semanas.forEach(function(semana) {
+    var rows = [['Grupo','Nombre completo','Año nac.','Talla','Comedor','Alergias']];
+    grupos[semana].forEach(function(grupo, gi) {
+      var groupName = getGroupName(gi);
+      grupo.forEach(function(k) {
+        rows.push([
+          groupName,
+          fullName(k),
+          k.anoNac||'',
+          k.talla||'—',
+          k.comedor?'Sí':'No',
+          k.alergias||''
+        ]);
+      });
+      rows.push(['','','','','','']); // blank row between groups
+    });
+
+    var ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{wch:14},{wch:28},{wch:10},{wch:10},{wch:10},{wch:24}];
+
+    // Style header
+    var headerStyle = {fill:{fgColor:{rgb:'0A0E14'}},font:{bold:true,color:{rgb:'FFB800'}}};
+    ['A1','B1','C1','D1','E1','F1'].forEach(function(cell) {
+      if(ws[cell]) ws[cell].s = headerStyle;
+    });
+
+    XLSX.utils.book_append_sheet(wb, ws, semana.replace('Semana ','S'));
+  });
+
+  // Summary sheet: all kids unique, sorted by talla
+  var allKids = [];
+  var seen = new Set();
+  semanas.forEach(function(s) {
+    grupos[s].forEach(function(g) {
+      g.forEach(function(k) {
+        var uid = (k.nombre||'')+'_'+(k.apellidos||'');
+        if(!seen.has(uid)) {
+          seen.add(uid);
+          allKids.push(k);
+        }
+      });
+    });
+  });
+
+  // Count by talla
+  var tallaCounts = {};
+  allKids.forEach(function(k) {
+    var t = (k.talla||'Sin dato').toUpperCase().trim();
+    tallaCounts[t] = (tallaCounts[t]||0)+1;
+  });
+
+  var resumenRows = [['Talla','Cantidad']];
+  var order = ['2','4','6','8','10','12','14','XS','S','M','L','XL','XXL','SIN DATO'];
+  var sorted = Object.entries(tallaCounts).sort(function(a,b) {
+    var ia = order.indexOf(a[0]), ib = order.indexOf(b[0]);
+    if(ia<0) ia=99; if(ib<0) ib=99;
+    return ia-ib;
+  });
+  sorted.forEach(function(e) { resumenRows.push([e[0], e[1]]); });
+  resumenRows.push(['TOTAL', allKids.length]);
+
+  var wsRes = XLSX.utils.aoa_to_sheet(resumenRows);
+  wsRes['!cols'] = [{wch:12},{wch:12}];
+  XLSX.utils.book_append_sheet(wb, wsRes, 'Resumen tallas');
+
+  XLSX.writeFile(wb, 'tallas-camiseta.xlsx');
+  showToast('👕 Excel de tallas generado ✅','success');
+}
+
+// ══════════════════════════════════════════════
+// INFORME FINAL DE ASISTENCIA
+// ══════════════════════════════════════════════
+function exportInformeAsistencia() {
+  if(!window._fbDB) { showToast('⚠️ Necesitas Firebase conectado','error'); return; }
+  showToast('⏳ Generando informe...','success');
+
+  window._fbDB.collection('attendance').get().then(function(snap) {
+    // Build: kidCode -> {semana, dates: {date: status}}
+    var attData = {};
+    snap.forEach(function(doc) {
+      var parts = doc.id.split('_');
+      if(parts.length < 3) return;
+      var code = parts[1];
+      var date = parts[2];
+      try {
+        var data = JSON.parse(doc.data().data||'{}');
+        if(!attData[code]) attData[code] = {};
+        attData[code][date] = data;
+      } catch(e) {}
+    });
+
+    var wb = XLSX.utils.book_new();
+    var semanas = Object.keys(grupos);
+
+    semanas.forEach(function(semana) {
+      // Get all dates recorded for this semana's groups
+      var allDates = new Set();
+      grupos[semana].forEach(function(grupo, gi) {
+        var autoCode = makeCode(semana, gi);
+        var monRaw = null;
+        try { var ms=localStorage.getItem('campusMonitores'); if(ms) monRaw=JSON.parse(ms); } catch(e) {}
+        var monCode = monRaw&&monRaw.asignaciones&&monRaw.asignaciones[semana] ? monRaw.asignaciones[semana][gi]||'' : '';
+        var code = monCode || autoCode;
+        if(attData[code]) Object.keys(attData[code]).forEach(function(d){ allDates.add(d); });
+      });
+
+      var dates = Array.from(allDates).sort();
+      if(!dates.length) return;
+
+      var header = ['Grupo','Nombre','Año nac.'].concat(dates.map(function(d) {
+        var parts = d.split('-');
+        return parts[2]+'/'+parts[1];
+      })).concat(['Total días','% Asistencia']);
+
+      var rows = [header];
+
+      grupos[semana].forEach(function(grupo, gi) {
+        var groupName = getGroupName(gi);
+        var autoCode = makeCode(semana, gi);
+        var monRaw = null;
+        try { var ms=localStorage.getItem('campusMonitores'); if(ms) monRaw=JSON.parse(ms); } catch(e) {}
+        var monCode = monRaw&&monRaw.asignaciones&&monRaw.asignaciones[semana] ? monRaw.asignaciones[semana][gi]||'' : '';
+        var code = monCode || autoCode;
+        var dayData = attData[code] || {};
+
+        grupo.forEach(function(k) {
+          var kidName = fullName(k);
+          var present = 0, total = 0;
+          var dayCells = dates.map(function(d) {
+            var dayAtt = dayData[d];
+            if(!dayAtt) return '—';
+            var status = dayAtt[kidName] || dayAtt[k.id] || '';
+            if(status==='present'||status==='P') { present++; total++; return '✅'; }
+            if(status==='absent'||status==='A') { total++; return '❌'; }
+            return '—';
+          });
+          var pct = total ? Math.round(present/total*100)+'%' : '—';
+          rows.push([groupName, kidName, k.anoNac||''].concat(dayCells).concat([present+'/'+total, pct]));
+        });
+        rows.push(new Array(header.length).fill(''));
+      });
+
+      var ws = XLSX.utils.aoa_to_sheet(rows);
+      ws['!cols'] = [{wch:14},{wch:28},{wch:8}].concat(dates.map(function(){return {wch:8};})).concat([{wch:10},{wch:12}]);
+      XLSX.utils.book_append_sheet(wb, ws, semana.replace('Semana ','S'));
+    });
+
+    XLSX.writeFile(wb, 'informe-asistencia-campus.xlsx');
+    showToast('📊 Informe generado ✅','success');
+  }).catch(function(e) {
+    showToast('❌ Error: '+e.message,'error');
+  });
+}
+
+// ══════════════════════════════════════════════
+// INCIDENCIAS DE PADRES
+// ══════════════════════════════════════════════
+function loadIncidencias() {
+  var el = document.getElementById('incidencias-list');
+  if(!el) return;
+  if(!window._fbDB) { el.innerHTML = '<p style="color:red">Firebase no conectado.</p>'; return; }
+  el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)">Cargando...</div>';
+
+  window._fbDB.collection('incidencias').orderBy('fecha','desc').get().then(function(snap) {
+    if(snap.empty) {
+      el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">No hay incidencias todavía.</div>';
+      return;
+    }
+    el.innerHTML = '';
+    snap.forEach(function(doc) {
+      var d = doc.data();
+      var fecha = d.fecha && d.fecha.toDate ? d.fecha.toDate() : new Date(d.fecha);
+      var fechaStr = fecha.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'2-digit'}) + ' ' +
+                     fecha.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+      var card = document.createElement('div');
+      card.style.cssText = 'background:'+(d.leida?'#f8f9fa':'#fff')+';border:1px solid '+(d.leida?'#e0e0e0':'#90CAF9')+';border-radius:12px;padding:14px 16px;margin-bottom:10px';
+
+      var header = document.createElement('div');
+      header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px';
+      var waLink = d.telefono ? ' <a href="https://wa.me/34'+d.telefono.replace(/\D/g,'')+'" target="_blank" style="color:#25D366;font-size:.75rem;font-weight:600;text-decoration:none">📱 WhatsApp</a>' : '';
+      header.innerHTML = '<div style="font-weight:700;font-size:.88rem">'+d.nombre+' · <span style="color:var(--sky)">'+d.nino+'</span>'+(d.telefono?'<span style="font-size:.75rem;color:#888;font-weight:400"> · '+d.telefono+'</span>':'')+waLink+'</div>'+
+        '<div style="font-size:.72rem;color:#aaa">'+fechaStr+'</div>';
+      card.appendChild(header);
+
+      var msg = document.createElement('div');
+      msg.style.cssText = 'font-size:.84rem;color:#333;line-height:1.5;margin-bottom:10px';
+      msg.textContent = d.texto;
+      card.appendChild(msg);
+
+      var actions = document.createElement('div');
+      actions.style.cssText = 'display:flex;gap:8px';
+      var btnLeer = document.createElement('button');
+      btnLeer.className = 'btn btn-outline btn-sm';
+      btnLeer.textContent = d.leida ? '✅ Leída' : '👁️ Marcar como leída';
+      btnLeer.style.opacity = d.leida ? '0.5' : '1';
+      btnLeer.addEventListener('click', (function(id, card, btn, data){
+        return function() {
+          window._fbDB.collection('incidencias').doc(id).update({leida: true}).then(function() {
+            card.style.background = '#f8f9fa';
+            card.style.borderColor = '#e0e0e0';
+            btn.textContent = '✅ Leída';
+            btn.style.opacity = '0.5';
+          });
+        };
+      })(doc.id, card, btnLeer, d));
+      actions.appendChild(btnLeer);
+
+      var btnDel = document.createElement('button');
+      btnDel.className = 'btn btn-danger btn-sm';
+      btnDel.textContent = '🗑️';
+      btnDel.addEventListener('click', (function(id, card){
+        return function() {
+          if(!confirm('¿Eliminar esta incidencia?')) return;
+          window._fbDB.collection('incidencias').doc(id).delete().then(function() {
+            card.remove();
+          });
+        };
+      })(doc.id, card));
+      actions.appendChild(btnDel);
+      card.appendChild(actions);
+      el.appendChild(card);
+    });
+  }).catch(function(e) {
+    el.innerHTML = '<p style="color:red">Error: '+e.message+'</p>';
+  });
+}
 
 // ══════════════════════════════════════════════
 // EXPORTAR PDF POR GRUPO
@@ -5180,6 +6358,22 @@ document.addEventListener('DOMContentLoaded', function() {
     <span>📲</span><span>QR</span>
   </button>
 </nav>
+
+<!-- ══════════ VISTA INCIDENCIAS ══════════ -->
+<div class="view" id="view-incidencias">
+  <div class="container" style="max-width:760px">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+        <div>
+          <div class="card-title" style="margin:0">📬 Incidencias de padres</div>
+          <div class="card-desc" style="margin:0">Mensajes enviados desde el portal de padres</div>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="loadIncidencias()">🔄 Actualizar</button>
+      </div>
+      <div id="incidencias-list"><div style="text-align:center;padding:30px;color:var(--muted)">Cargando...</div></div>
+    </div>
+  </div>
+</div>
 
 <!-- ══════════ VISTA HISTORIAL ASISTENCIA ══════════ -->
 <div class="view" id="view-histasist">
